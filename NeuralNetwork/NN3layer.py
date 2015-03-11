@@ -75,12 +75,23 @@ class Sequence:
     def __init__(self, seq_ATCG):
         self.seq = seq_ATCG
         self.length = len(seq_ATCG)
-        self.vector_rep = []
-        self.vector_length = len(self.vector_rep)
+        self.vector_rep = np.zeros([self.length*4, 1])
+        self.vector_length = 4*len(self.vector_rep)
+        self.nuc_ordering = ['A', 'T', 'C', 'G']
         
-    
-        
-
+        for i in range(self.length): 
+            j = i*4
+            if self.seq[i] is 'A':
+                self.vector_rep[j] = 1
+            elif self.seq[i] is 'T':
+                self.vector_rep[j+1] = 1
+            elif self.seq[i] is 'C':
+                self.vector_rep[j+2] = 1
+            elif self.seq[i] is 'G':
+                self.vector_rep[j+3] = 1
+            else:
+                print 'nucleotide not found'
+                break
 ###############################################################################
 #                                                                             #
 # calc error for training                                                     #
@@ -124,12 +135,13 @@ def main():
     np.set_printoptions(threshold=1000, linewidth=1000, precision = 5, suppress = False)
     
     
-    temp_input = np.ones([4,1])
-    temp_input[2,0]= 2
-    NN = Network(temp_input,1,10,'sigmoid')
-    NN.forwardprop(temp_input)
-    
-    training_set = np.hstack((temp_input,temp_input))
+    seq1 = Sequence('ACATCCGTGCACCTCCG')
+    seq2 = Sequence('CCACCCGTACCCATGAC')
+    NN = Network(seq1.vector_rep,1,10,'sigmoid')
+    NN.forwardprop(seq1.vector_rep)
+    print seq1.vector_rep
+    print len(seq1.vector_rep)
+    training_set = np.hstack((seq1.vector_rep,seq2.vector_rep))
     errors = cost_func(NN, training_set, 1)
     print errors
     return 1

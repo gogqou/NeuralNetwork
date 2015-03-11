@@ -93,6 +93,29 @@ class Sequence:
                 print 'nucleotide not found'
                 break
 ###############################################################################
+
+###############################################################################
+#                                                                             #
+# gradient descent method to calculate error and help out with backprop       #
+def make_training_set(file, posorneg= 1):
+    
+    file_lines = readtxt(file)
+    seqs = np.zeros([68, len(file_lines)])
+    print seqs
+    print seqs.shape
+    labels = []
+    i = 0
+    for file_line in file_lines:
+        seq = Sequence(file_line)
+        seqs[:,i] = seq.vector_rep
+        labels.append(posorneg)
+        i = i+1
+    return seqs, labels
+###############################################################################
+def readtxt(filename):
+    lines = [line.strip() for line in open(filename)]
+    return lines
+###############################################################################
 #                                                                             #
 # calc error for training                                                     #
 def cost_func(NeuralNetwork, training_set, t_set_value):
@@ -134,16 +157,16 @@ def grad_des(NeuralNetwork):
 def main():
     np.set_printoptions(threshold=1000, linewidth=1000, precision = 5, suppress = False)
     
-    
-    seq1 = Sequence('ACATCCGTGCACCTCCG')
-    seq2 = Sequence('CCACCCGTACCCATGAC')
-    NN = Network(seq1.vector_rep,1,10,'sigmoid')
-    NN.forwardprop(seq1.vector_rep)
-    print seq1.vector_rep
-    print len(seq1.vector_rep)
-    training_set = np.hstack((seq1.vector_rep,seq2.vector_rep))
-    errors = cost_func(NN, training_set, 1)
-    print errors
+    seqs, labels = make_training_set('/home/gogqou/Documents/Classes/bmi203-final-project/rap1-lieb-positives.txt')
+    print seqs
+    print labels
+    #seq1 = Sequence('ACATCCGTGCACCTCCG')
+    #seq2 = Sequence('CCACCCGTACCCATGAC')
+    #NN = Network(seq1.vector_rep,1,10,'sigmoid')
+    #NN.forwardprop(seq1.vector_rep)
+    #training_set = np.hstack((seq1.vector_rep,seq2.vector_rep))
+    #errors = cost_func(NN, training_set, 1)
+    #print errors
     return 1
 
 if __name__ == '__main__':

@@ -22,6 +22,8 @@ instrumented for cross validation
 import numpy as np
 import sys
 import math
+from Bio import SeqIO
+from Bio.Alphabet import IUPAC
 ###############################################################################
 #                                                                             #
 # class for a neural network                                                  #
@@ -121,10 +123,13 @@ def readtxt(filename):
 #                                                                             #
 # generate negative sequences from fa file of yeast UTRs                      #
 def gen_nmers_from_fa(file, n):
-    
+    sequenceList = []
+    for seq_record in SeqIO.parse(file, "fasta"):
+        sequenceList.append(seq_record)
+        print seq_record
     nmer_seqs = []
     
-    return nmer_seqs
+    return nmer_seqs, sequenceList
 
 ###############################################################################
 ###############################################################################

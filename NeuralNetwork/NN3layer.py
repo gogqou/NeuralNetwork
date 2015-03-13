@@ -118,20 +118,42 @@ def make_training_set(file, posorneg= 1):
 def readtxt(filename):
     lines = [line.strip() for line in open(filename)]
     return lines
-
+def writetxt(seqList, filename):
+    out = open(filename, 'w')
+    for i in range(len(seqList)):
+        out.write(seqList[i])
+    out.close()
+    
+    return 1
 ###############################################################################
 #                                                                             #
 # generate negative sequences from fa file of yeast UTRs                      #
-def gen_nmers_from_fa(file, n):
-    sequenceList = []
-    for seq_record in SeqIO.parse(file, "fasta"):
-        sequenceList.append(seq_record)
-        print seq_record
+def gen_nmers_from_fa(file, n, neg_file_name):
+    neg_seq_dict = {}
     nmer_seqs = []
-    
-    return nmer_seqs, sequenceList
+    for seq_record in SeqIO.parse(file, "fasta"):
+        seq = str(seq_record.seq)
+        neg_seq_dict[seq_record.id] = seq
+        nmers_list = nmers(seq, n)
+        nmer_seqs.append(nmers_list)
+        
+       
+    return nmer_seqs, neg_seq_dict
 
 ###############################################################################
+
+###############################################################################
+#                                                                             #
+# generate n-long sequences from sequence                                     #
+def nmers(seq, n):
+    seq_list = []
+    for i in range(len(seq)-17):
+        seq_list.append(seq[i:i+17])
+    return seq_list
+
+
+###############################################################################
+
 ###############################################################################
 #                                                                             #
 # calc error for training                                                     #
@@ -174,14 +196,15 @@ def main():
     np.set_printoptions(threshold=1000, linewidth=1000, precision = 5, suppress = False)
     positive_sequences_file = sys.argv[1]
     negative_fa_file = sys.argv[2]
-    
+    neg_file_name = '/home/gogqou/Documents/Classes/bmi203-final-project/neg_nmers_seqs.txt'
     posseqs, pos_sequenceList = make_training_set(positive_sequences_file)
-    negseqs, neg_sequenceList = gen_nmers_from_fa(negative_fa_file, 17)
+    negseqs_string, neg_seq_dict = gen_nmers_from_fa(negative_fa_file, 17, neg_file_name)
+    negseqs, neg_sequenceList = make_training_set(neg_file_name)
     NN_input = np.array([posseqs[:,0]])
     NN = Network(NN_input,1,10,'sigmoid')
     NN.forwardprop(posseqs[:,0])
     errors_pos = cost_func(NN, posseqs, pos_sequenceList)
-    print errors_pos
+    #print errors_pos
     errors_neg = cost_func(NN, negseqs, neg_sequenceList)
     print errors_neg
     return 1

@@ -29,18 +29,22 @@ import math
 class Network:
 
     def __init__(self, inputx, outputnum, hiddennodes, activation_func ):
-        self.input = inputx
+        self.input = np.transpose(inputx)
         self.n_inputs = len(self.input) #allows you to set how many inputs are in the first layer
         self.n_outputs = outputnum #allows you to set how many outputs come from the neural network
         self.n_hidden_nodes = hiddennodes
-        self.bias = 1 #always just set bias term to 1
+        self.bias = np.array([1]) #always just set bias term to 1
         self.Hlayer = np.zeros([hiddennodes+1, 1]) #add 1 to make space for the bias node
         self.weights_Hlayer = np.zeros([self.n_inputs+1, hiddennodes+1]) 
         #add one to each dimension to add space for the bias nodes in input and hidden layers
         self.weights_output = np.zeros([hiddennodes+1,self.n_outputs])
         
         #add one in vertical dimension to make space for bias node in hidden layer
-        self.input = np.vstack((self.input, [self.bias]))
+
+        #self.input = np.vstack((self.input, self.bias))
+        print self.input.shape
+        print self.bias.shape
+        self.input = np.append(self.input, np.array(self.bias[0:1]))
         #initialize the weights with random small numbers
         for i in range(self.n_inputs+1):
             for j in range(self.n_hidden_nodes+1):
@@ -72,12 +76,13 @@ class Network:
 
 class Sequence:
 
-    def __init__(self, seq_ATCG):
+    def __init__(self, seq_ATCG, label):
         self.seq = seq_ATCG
         self.length = len(seq_ATCG)
         self.vector_rep = np.zeros([self.length*4, 1])
         self.vector_length = 4*len(self.vector_rep)
         self.nuc_ordering = ['A', 'T', 'C', 'G']
+        self.label = label
         
         for i in range(self.length): 
             j = i*4
@@ -100,17 +105,16 @@ class Sequence:
 def make_training_set(file, posorneg= 1):
     
     file_lines = readtxt(file)
-    seqs = np.zeros([68, len(file_lines)])
-    print seqs
-    print seqs.shape
-    labels = []
+    seqs = np.zeros([68, 1])
+    sequenceList = []
     i = 0
     for file_line in file_lines:
-        seq = Sequence(file_line)
-        seqs[:,i] = seq.vector_rep
-        labels.append(posorneg)
+        seq = Sequence(file_line, posorneg)
+        seqs = np.hstack((seqs, seq.vector_rep))
+        sequenceList.append(seq)
         i = i+1
-    return seqs, labels
+    seqs = seqs[:,1:i+1]
+    return seqs, sequenceList
 ###############################################################################
 def readtxt(filename):
     lines = [line.strip() for line in open(filename)]
@@ -118,9 +122,8 @@ def readtxt(filename):
 ###############################################################################
 #                                                                             #
 # calc error for training                                                     #
-def cost_func(NeuralNetwork, training_set, t_set_value):
+def cost_func(NeuralNetwork, training_set, sequenceList):
     [x,y] = training_set.shape
-    training_set_outputs = t_set_value*np.ones([y, 1])
     NN_outputs = np.zeros([y, 1])
     
     errors =np.zeros([y, 1])
@@ -128,7 +131,7 @@ def cost_func(NeuralNetwork, training_set, t_set_value):
         training_set_temp = np.matrix(training_set[:,i])
         NeuralNetwork.forwardprop(training_set_temp.T) 
         NN_outputs[i] = NeuralNetwork.output
-        errors[i] = .5*math.pow((NN_outputs[i]-training_set_outputs[i]), 2)
+        errors[i] = .5*math.pow((NN_outputs[i]-sequenceList[i].label), 2)
     
     return errors
 ###############################################################################
@@ -157,16 +160,14 @@ def grad_des(NeuralNetwork):
 def main():
     np.set_printoptions(threshold=1000, linewidth=1000, precision = 5, suppress = False)
     
-    seqs, labels = make_training_set('/home/gogqou/Documents/Classes/bmi203-final-project/rap1-lieb-positives.txt')
-    print seqs
-    print labels
-    #seq1 = Sequence('ACATCCGTGCACCTCCG')
-    #seq2 = Sequence('CCACCCGTACCCATGAC')
-    #NN = Network(seq1.vector_rep,1,10,'sigmoid')
-    #NN.forwardprop(seq1.vector_rep)
+    posseqs, sequenceList = make_training_set('/home/gogqou/Documents/Classes/bmi203-final-project/rap1-lieb-positives.txt')
+    print posseqs
+    input = np.matrix(posseqs[:,0])
+    NN = Network(input,1,10,'sigmoid')
+    NN.forwardprop(posseqs[:,0])
     #training_set = np.hstack((seq1.vector_rep,seq2.vector_rep))
-    #errors = cost_func(NN, training_set, 1)
-    #print errors
+    errors = cost_func(NN, posseqs, 1)
+    print errors
     return 1
 
 if __name__ == '__main__':

@@ -116,6 +116,17 @@ def make_training_set(file, posorneg= 1):
 def readtxt(filename):
     lines = [line.strip() for line in open(filename)]
     return lines
+
+###############################################################################
+#                                                                             #
+# generate negative sequences from fa file of yeast UTRs                      #
+def gen_nmers_from_fa(file, n):
+    
+    nmer_seqs = []
+    
+    return nmer_seqs
+
+###############################################################################
 ###############################################################################
 #                                                                             #
 # calc error for training                                                     #
@@ -127,6 +138,7 @@ def cost_func(NeuralNetwork, training_set, sequenceList):
         training_set_temp = np.array(training_set[:,i])
         NeuralNetwork.forwardprop(training_set_temp.T) 
         NN_outputs[i] = NeuralNetwork.output
+        #error = 1/2(y-f(x))^2
         errors[i] = .5*math.pow((NN_outputs[i]-sequenceList[i].label), 2)
     
     return errors
@@ -157,13 +169,16 @@ def main():
     np.set_printoptions(threshold=1000, linewidth=1000, precision = 5, suppress = False)
     positive_sequences_file = sys.argv[1]
     negative_fa_file = sys.argv[2]
-    posseqs, sequenceList = make_training_set(positive_sequences_file)
     
-    input = np.array([posseqs[:,0]])
-    NN = Network(input,1,10,'sigmoid')
+    posseqs, pos_sequenceList = make_training_set(positive_sequences_file)
+    negseqs, neg_sequenceList = gen_nmers_from_fa(negative_fa_file, 17)
+    NN_input = np.array([posseqs[:,0]])
+    NN = Network(NN_input,1,10,'sigmoid')
     NN.forwardprop(posseqs[:,0])
-    errors = cost_func(NN, posseqs, sequenceList)
-    print errors
+    errors_pos = cost_func(NN, posseqs, pos_sequenceList)
+    print errors_pos
+    errors_neg = cost_func(NN, negseqs, neg_sequenceList)
+    print errors_neg
     return 1
 
 if __name__ == '__main__':

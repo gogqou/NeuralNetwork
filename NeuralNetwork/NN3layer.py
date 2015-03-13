@@ -29,11 +29,11 @@ import math
 class Network:
 
     def __init__(self, inputx, outputnum, hiddennodes, activation_func ):
-        self.input = np.transpose(inputx)
+        self.bias = 1 #always just set bias term to 1
+        self.input = np.transpose(inputx)        
         self.n_inputs = len(self.input) #allows you to set how many inputs are in the first layer
         self.n_outputs = outputnum #allows you to set how many outputs come from the neural network
         self.n_hidden_nodes = hiddennodes
-        self.bias = np.array([1]) #always just set bias term to 1
         self.Hlayer = np.zeros([hiddennodes+1, 1]) #add 1 to make space for the bias node
         self.weights_Hlayer = np.zeros([self.n_inputs+1, hiddennodes+1]) 
         #add one to each dimension to add space for the bias nodes in input and hidden layers
@@ -41,10 +41,7 @@ class Network:
         
         #add one in vertical dimension to make space for bias node in hidden layer
 
-        #self.input = np.vstack((self.input, self.bias))
-        print self.input.shape
-        print self.bias.shape
-        self.input = np.append(self.input, np.array(self.bias[0:1]))
+        self.input = np.append(self.input, [self.bias])
         #initialize the weights with random small numbers
         for i in range(self.n_inputs+1):
             for j in range(self.n_hidden_nodes+1):
@@ -57,7 +54,7 @@ class Network:
         #method to calculate new output value
         self.input = x
         self.n_inputs = len(self.input)
-        self.input = np.vstack((self.input, [self.bias]))
+        self.input = np.append(self.input, [self.bias])
         
         #add on the bias node to input
         #set up transpose of the weights matrices for matrix multiplication
@@ -125,10 +122,9 @@ def readtxt(filename):
 def cost_func(NeuralNetwork, training_set, sequenceList):
     [x,y] = training_set.shape
     NN_outputs = np.zeros([y, 1])
-    
     errors =np.zeros([y, 1])
     for i in range(y):
-        training_set_temp = np.matrix(training_set[:,i])
+        training_set_temp = np.array(training_set[:,i])
         NeuralNetwork.forwardprop(training_set_temp.T) 
         NN_outputs[i] = NeuralNetwork.output
         errors[i] = .5*math.pow((NN_outputs[i]-sequenceList[i].label), 2)
@@ -159,14 +155,14 @@ def grad_des(NeuralNetwork):
 
 def main():
     np.set_printoptions(threshold=1000, linewidth=1000, precision = 5, suppress = False)
+    positive_sequences_file = sys.argv[1]
+    negative_fa_file = sys.argv[2]
+    posseqs, sequenceList = make_training_set(positive_sequences_file)
     
-    posseqs, sequenceList = make_training_set('/home/gogqou/Documents/Classes/bmi203-final-project/rap1-lieb-positives.txt')
-    print posseqs
-    input = np.matrix(posseqs[:,0])
+    input = np.array([posseqs[:,0]])
     NN = Network(input,1,10,'sigmoid')
     NN.forwardprop(posseqs[:,0])
-    #training_set = np.hstack((seq1.vector_rep,seq2.vector_rep))
-    errors = cost_func(NN, posseqs, 1)
+    errors = cost_func(NN, posseqs, sequenceList)
     print errors
     return 1
 

@@ -53,6 +53,7 @@ class Network:
         for k in range(self.n_hidden_nodes+1):
             for m in range(self.n_outputs):
                 self.weights_output[k,m] = np.random.random()
+             
     def forwardprop(self, x):
         #method to calculate new output value
         [self.inputshapex, self.inputshapey] = x.shape
@@ -67,8 +68,9 @@ class Network:
         weights_t = np.transpose(self.weights_Hlayer)
         weights_t_out = np.transpose(self.weights_output)
         #forward propagate using the weights and the values in each layer
-        self.Hlayer = np.dot(weights_t, self.input)
-        self.output = np.dot(weights_t_out, self.Hlayer)
+        self.Hlayer = sigmoid(np.dot(weights_t, self.input))
+        print self.Hlayer
+        self.output = sigmoid(np.dot(weights_t_out, self.Hlayer))
         print 'done forward prop'
               
         
@@ -102,6 +104,10 @@ class Sequence:
                 print 'nucleotide not found'
                 break
 ###############################################################################
+
+def sigmoid(x):
+    return 1/(1+np.exp(-x))
+
 
 ###############################################################################
 #                                                                             #

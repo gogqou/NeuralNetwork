@@ -65,6 +65,7 @@ class Network:
         #forward propagate using the weights and the values in each layer
         self.Hlayer = np.dot(weights_t, self.input)
         self.output = np.dot(weights_t_out, self.Hlayer)
+        print 'done forward prop'
               
         
 ###############################################################################
@@ -105,15 +106,17 @@ def make_training_set(file, posorneg= 1):
     
     file_lines = readtxt(file)
     seqs = np.zeros([68, 1])
+    pos_dict = {}
     sequenceList = []
     i = 0
     for file_line in file_lines:
         seq = Sequence(file_line, posorneg)
+        pos_dict[seq.seq] = seq.label
         seqs = np.hstack((seqs, seq.vector_rep))
         sequenceList.append(seq)
         i = i+1
     seqs = seqs[:,1:i+1]
-    return seqs, sequenceList
+    return seqs, sequenceList, pos_dict
 ###############################################################################
 def readtxt(filename):
     lines = [line.strip() for line in open(filename)]
@@ -121,23 +124,24 @@ def readtxt(filename):
 def writetxt(seqList, filename):
     out = open(filename, 'w')
     for i in range(len(seqList)):
-        out.write(seqList[i])
+        for j in range(len(seqList[i])):
+            out.write(seqList[i][j]+'\n')
     out.close()
-    
+    print 'done writing'
     return 1
 ###############################################################################
 #                                                                             #
 # generate negative sequences from fa file of yeast UTRs                      #
-def gen_nmers_from_fa(file, n, neg_file_name):
+def gen_nmers_from_fa(file, n, neg_file_name, pos_dict):
     neg_seq_dict = {}
     nmer_seqs = []
+    uniq_dict= {}
     for seq_record in SeqIO.parse(file, "fasta"):
         seq = str(seq_record.seq)
-        neg_seq_dict[seq_record.id] = seq
-        nmers_list = nmers(seq, n)
+        nmers_list = nmers(seq, n, uniq_dict, pos_dict)
         nmer_seqs.append(nmers_list)
-        
-       
+    writetxt(nmer_seqs, neg_file_name)
+    
     return nmer_seqs, neg_seq_dict
 
 ###############################################################################
@@ -145,10 +149,15 @@ def gen_nmers_from_fa(file, n, neg_file_name):
 ###############################################################################
 #                                                                             #
 # generate n-long sequences from sequence                                     #
-def nmers(seq, n):
+def nmers(seq, n, uniq_dict, pos_dict):
     seq_list = []
     for i in range(len(seq)-17):
-        seq_list.append(seq[i:i+17])
+        if seq[i:i+17] in pos_dict.keys():
+            continue
+        elif seq[i:i+17] in uniq_dict.keys():
+            continue
+        else:
+            seq_list.append(seq[i:i+17])
     return seq_list
 
 
@@ -158,6 +167,7 @@ def nmers(seq, n):
 #                                                                             #
 # calc error for training                                                     #
 def cost_func(NeuralNetwork, training_set, sequenceList):
+    print 'calculating cost_func'
     [x,y] = training_set.shape
     NN_outputs = np.zeros([y, 1])
     errors =np.zeros([y, 1])
@@ -197,16 +207,17 @@ def main():
     positive_sequences_file = sys.argv[1]
     negative_fa_file = sys.argv[2]
     neg_file_name = '/home/gogqou/Documents/Classes/bmi203-final-project/neg_nmers_seqs.txt'
-    posseqs, pos_sequenceList = make_training_set(positive_sequences_file)
-    negseqs_string, neg_seq_dict = gen_nmers_from_fa(negative_fa_file, 17, neg_file_name)
-    negseqs, neg_sequenceList = make_training_set(neg_file_name)
+    posseqs, pos_sequenceList, pos_dict = make_training_set(positive_sequences_file)
+    negseqs_string, neg_seq_dict = gen_nmers_from_fa(negative_fa_file, 17, neg_file_name, pos_dict)
+    #negseqs, neg_sequenceList = make_training_set(neg_file_name)
     NN_input = np.array([posseqs[:,0]])
     NN = Network(NN_input,1,10,'sigmoid')
     NN.forwardprop(posseqs[:,0])
     errors_pos = cost_func(NN, posseqs, pos_sequenceList)
-    #print errors_pos
-    errors_neg = cost_func(NN, negseqs, neg_sequenceList)
-    print errors_neg
+    print errors_pos
+    #NN.forwardprop(negseqs[:,0])
+    #errors_neg = cost_func(NN, negseqs, neg_sequenceList)
+    #print errors_neg
     return 1
 
 if __name__ == '__main__':

@@ -38,19 +38,19 @@ class Network:
         self.n_outputs = outputnum #allows you to set how many outputs come from the neural network
         self.n_hidden_nodes = hiddennodes
         self.Hlayer = np.zeros([hiddennodes+1, 1]) #add 1 to make space for the bias node
-        self.weights_Hlayer = np.zeros([self.n_inputs+1, hiddennodes+1]) 
+        self.weights_Hlayer = np.ones([self.n_inputs+1, hiddennodes+1]) 
         #add one to each dimension to add space for the bias nodes in input and hidden layers
-        self.weights_output = np.zeros([hiddennodes+1,self.n_outputs])
+        self.weights_output = np.ones([hiddennodes+1,self.n_outputs])
         
         #add one in vertical dimension to make space for bias node in hidden layer
 
         self.input = np.vstack((self.input, self.bias))
         #initialize the weights with random small numbers
-        for i in range(self.n_inputs+1):
+        for i in range(self.n_inputs):
             for j in range(self.n_hidden_nodes+1):
                 self.weights_Hlayer[i,j] = np.random.random()
                 
-        for k in range(self.n_hidden_nodes+1):
+        for k in range(self.n_hidden_nodes):
             for m in range(self.n_outputs):
                 self.weights_output[k,m] = np.random.random()
              
@@ -68,9 +68,12 @@ class Network:
         weights_t = np.transpose(self.weights_Hlayer)
         weights_t_out = np.transpose(self.weights_output)
         #forward propagate using the weights and the values in each layer
-        self.Hlayer = sigmoid(np.dot(weights_t, self.input))
+        print weights_t_out
+        self.Hlayer = np.dot(weights_t, self.input)
+        print self.Hlayer.shape
         print self.Hlayer
-        self.output = sigmoid(np.dot(weights_t_out, self.Hlayer))
+        self.output = sigmoid(np.dot(weights_t_out, sigmoid(self.Hlayer)))
+        print sigmoid(self.Hlayer)
         print 'done forward prop'
               
         
@@ -115,7 +118,8 @@ def sigmoid(x):
 def make_training_set(file, posorneg= 1):
     
     file_lines = readtxt(file)
-    seqs = np.zeros([68, 1])
+    #seqs = np.zeros([68, 1])
+    seqs = np.zeros([36, 1])
     pos_dict = {}
     sequenceList = []
     i = 0
@@ -221,7 +225,7 @@ def main():
     #negseqs_string, neg_seq_dict = gen_nmers_from_fa(negative_fa_file, 17, neg_file_name, pos_dict)
     #negseqs, neg_sequenceList = make_training_set(neg_file_name)
     #NN_input = np.array([posseqs[:,0]])
-    NN = Network(posseqs,1,10,'sigmoid')
+    NN = Network(posseqs,1,4,'sigmoid')
     NN.forwardprop(posseqs)
     print np.transpose(NN.output)
     #errors_pos = cost_func(NN, posseqs, pos_sequenceList)

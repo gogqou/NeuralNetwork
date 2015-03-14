@@ -23,7 +23,6 @@ import numpy as np
 import sys
 import math
 from Bio import SeqIO
-from Bio.Alphabet import IUPAC
 ###############################################################################
 #                                                                             #
 # class for a neural network                                                  #
@@ -31,9 +30,11 @@ from Bio.Alphabet import IUPAC
 class Network:
 
     def __init__(self, inputx, outputnum, hiddennodes, activation_func ):
-        self.bias = 1 #always just set bias term to 1
-        self.input = np.transpose(inputx)        
-        self.n_inputs = len(self.input) #allows you to set how many inputs are in the first layer
+        [self.inputshapex, self.inputshapey] = inputx.shape
+        print self.inputshapex
+        self.bias = np.ones([1, self.inputshapey]) #always just set bias term to 1
+        self.input = inputx        
+        self.n_inputs = self.inputshapex #allows you to set how many inputs are in the first layer
         self.n_outputs = outputnum #allows you to set how many outputs come from the neural network
         self.n_hidden_nodes = hiddennodes
         self.Hlayer = np.zeros([hiddennodes+1, 1]) #add 1 to make space for the bias node
@@ -43,7 +44,7 @@ class Network:
         
         #add one in vertical dimension to make space for bias node in hidden layer
 
-        self.input = np.append(self.input, [self.bias])
+        self.input = np.vstack((self.input, self.bias))
         #initialize the weights with random small numbers
         for i in range(self.n_inputs+1):
             for j in range(self.n_hidden_nodes+1):
@@ -54,9 +55,12 @@ class Network:
                 self.weights_output[k,m] = np.random.random()
     def forwardprop(self, x):
         #method to calculate new output value
-        self.input = x
-        self.n_inputs = len(self.input)
-        self.input = np.append(self.input, [self.bias])
+        [self.inputshapex, self.inputshapey] = x.shape
+        print self.inputshapex
+        self.bias = np.ones([1, self.inputshapey]) #always just set bias term to 1
+        self.input = x        
+        self.n_inputs = self.inputshapex
+        self.input = np.vstack((self.input, self.bias))
         
         #add on the bias node to input
         #set up transpose of the weights matrices for matrix multiplication
@@ -205,16 +209,20 @@ def grad_des(NeuralNetwork):
 def main():
     np.set_printoptions(threshold=1000, linewidth=1000, precision = 5, suppress = False)
     positive_sequences_file = sys.argv[1]
-    negative_fa_file = sys.argv[2]
-    neg_file_name = '/home/gogqou/Documents/Classes/bmi203-final-project/neg_nmers_seqs.txt'
+    #negative_fa_file = sys.argv[2]
+    #neg_file_name = '/home/gogqou/Documents/Classes/bmi203-final-project/neg_nmers_seqs.txt'
     posseqs, pos_sequenceList, pos_dict = make_training_set(positive_sequences_file)
-    negseqs_string, neg_seq_dict = gen_nmers_from_fa(negative_fa_file, 17, neg_file_name, pos_dict)
+    #negseqs_string, neg_seq_dict = gen_nmers_from_fa(negative_fa_file, 17, neg_file_name, pos_dict)
     #negseqs, neg_sequenceList = make_training_set(neg_file_name)
-    NN_input = np.array([posseqs[:,0]])
-    NN = Network(NN_input,1,10,'sigmoid')
-    NN.forwardprop(posseqs[:,0])
-    errors_pos = cost_func(NN, posseqs, pos_sequenceList)
-    print errors_pos
+    #NN_input = np.array([posseqs[:,0]])
+    NN = Network(posseqs,1,10,'sigmoid')
+    NN.forwardprop(posseqs)
+    print np.transpose(NN.output)
+    #errors_pos = cost_func(NN, posseqs, pos_sequenceList)
+    #print errors_pos
+    
+    
+    
     #NN.forwardprop(negseqs[:,0])
     #errors_neg = cost_func(NN, negseqs, neg_sequenceList)
     #print errors_neg

@@ -114,17 +114,19 @@ def make_training_set(file, posorneg= 1):
     file_lines = readtxt(file)
     seqs = np.zeros([68, 1])
     
-    pos_dict = {}
+    seq_dict = {}
     sequenceList = []
     i = 0
     for file_line in file_lines:
         seq = Sequence(file_line, posorneg)
-        pos_dict[seq.seq] = seq.label
+        seq_dict[seq.seq] = seq.label
         seqs = np.hstack((seqs, seq.vector_rep))
         sequenceList.append(seq)
         i = i+1
+        print i
+        
     seqs = seqs[:,1:i+1]
-    return seqs, sequenceList, pos_dict
+    return seqs, sequenceList, seq_dict
 ###############################################################################
 def readtxt(filename):
     lines = [line.strip() for line in open(filename)]
@@ -132,24 +134,32 @@ def readtxt(filename):
 def writetxt(seqList, filename):
     out = open(filename, 'w')
     for i in range(len(seqList)):
-        for j in range(len(seqList[i])):
-            out.write(seqList[i][j]+'\n')
+        out.write(seqList[i]+'\n')
+    out.close()
+    print 'done writing'
+    return 1
+def writetxt2(seqList, filename):
+    out = open(filename, 'w')
+    for i in range(len(seqList)):
+        out.write(seqList[i][0]+'\n')
     out.close()
     print 'done writing'
     return 1
 ###############################################################################
 #                                                                             #
 # generate negative sequences from fa file of yeast UTRs                      #
-def gen_nmers_from_fa(file, n, neg_file_name, pos_dict):
+def gen_nmers_from_fa(file, n, directory, pos_dict):
     neg_seq_dict = {}
-    nmer_seqs = []
+    nmer_seqs = np.empty([1,1])
     uniq_dict= {}
     for seq_record in SeqIO.parse(file, "fasta"):
         seq = str(seq_record.seq)
         nmers_list = nmers(seq, n, uniq_dict, pos_dict)
-        nmer_seqs.append(nmers_list)
-    writetxt(nmer_seqs, neg_file_name)
-    
+        nmer_seqs = np.append(nmer_seqs, nmers_list)
+    #writetxt(nmer_seqs, directory+'neg_nmers.txt')
+    sample_indices = np.random.randint(0, len(nmer_seqs), [2000,1])
+    training_sample = nmer_seqs[sample_indices]
+    writetxt2(training_sample, directory + 'sample_nseqs.txt' )
     return nmer_seqs, neg_seq_dict
 
 ###############################################################################
@@ -211,12 +221,12 @@ def grad_des(NeuralNetwork):
 def main():
     np.set_printoptions(threshold=1000, linewidth=1000, precision = 5, suppress = False)
     positive_sequences_file = sys.argv[1]
-    #negative_fa_file = sys.argv[2]
-    #neg_file_name = '/home/gogqou/Documents/Classes/bmi203-final-project/neg_nmers_seqs.txt'
+    negative_fa_file = sys.argv[2]
+    directory = '/home/gogqou/Documents/Classes/bmi203-final-project/'
     posseqs, pos_sequenceList, pos_dict = make_training_set(positive_sequences_file)
-    #negseqs_string, neg_seq_dict = gen_nmers_from_fa(negative_fa_file, 17, neg_file_name, pos_dict)
-    #negseqs, neg_sequenceList = make_training_set(neg_file_name)
-    #NN_input = np.array([posseqs[:,0]])
+    #negseqs_string, neg_seq_dict = gen_nmers_from_fa(negative_fa_file, 17, directory, pos_dict)
+    negseqs, neg_sequenceList, neg_dict = make_training_set(directory + 'sample_nseqs.txt', 0)
+    #print negseqs.shape
     NN = Network(posseqs,1,10,'sigmoid')
     NN.forwardprop(posseqs)
     errors_pos = cost_func(NN, posseqs, pos_sequenceList)
@@ -224,9 +234,9 @@ def main():
     
     
     
-    #NN.forwardprop(negseqs[:,0])
-    #errors_neg = cost_func(NN, negseqs, neg_sequenceList)
-    #print errors_neg
+    NN.forwardprop(negseqs)
+    errors_neg = cost_func(NN, negseqs, neg_sequenceList)
+    print errors_neg
     return 1
 
 if __name__ == '__main__':

@@ -196,8 +196,25 @@ def cost_func(NeuralNetwork, training_set, sequenceList):
 
 ###############################################################################
 #                                                                             #
+#  train neural network with training set                                     #
+def train_NN(NN, training_set, sequenceList, learning_speed, error_tolerance):
+    errors = .5*np.ones([10,1])
+    while max(errors)> error_tolerance:
+        #forward propagate with the entire training set
+        NN.forwardprop(training_set)
+        errors = cost_func(NN, training_set, sequenceList)
+        backprop(NN, errors)
+        print errors
+        print 1
+    return NN
+###############################################################################
+
+
+
+###############################################################################
+#                                                                             #
 # backpropagation to calculate new weights                                    #
-def backward_propagation(NeuralNetwork):
+def backprop(NeuralNetwork, errors):
     print 1
     return NeuralNetwork
 ###############################################################################
@@ -220,18 +237,23 @@ def main():
     positive_sequences_file = sys.argv[1]
     negative_fa_file = sys.argv[2]
     directory = '/home/gogqou/Documents/Classes/bmi203-final-project/'
+    #makes training set of the positive sequences
     posseqs, pos_sequenceList, pos_dict = make_training_set(positive_sequences_file)
+    #only need to do this once:
     #negseqs_string, neg_seq_dict = gen_nmers_from_fa(negative_fa_file, 17, directory, pos_dict)
+    #this generates a entire set of negative sequences
+    #from which we took a sample and put into sample_nseqs.txt
+    
+    #makes training set of the negative sequences
     negseqs, neg_sequenceList, neg_dict = make_training_set(directory + 'sample_nseqs.txt', 0)
-
+    
+    #puts the pos and neg sets together
     full_training_set = np.hstack((posseqs, negseqs))
     full_sequenceList = pos_sequenceList + neg_sequenceList
-    
+    #initiate the neural network
     NN = Network(posseqs,1,10,'sigmoid')
+    train_NN(NN, full_training_set, full_sequenceList, learning_speed = .3, error_tolerance = .3)
     
-    NN.forwardprop(full_training_set)
-    errors = cost_func(NN, full_training_set, full_sequenceList)
-    print errors
     return 1
 
 if __name__ == '__main__':

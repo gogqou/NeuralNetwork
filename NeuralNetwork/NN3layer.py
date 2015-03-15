@@ -122,9 +122,7 @@ def make_training_set(file, posorneg= 1):
         seq_dict[seq.seq] = seq.label
         seqs = np.hstack((seqs, seq.vector_rep))
         sequenceList.append(seq)
-        i = i+1
-        print i
-        
+        i = i+1        
     seqs = seqs[:,1:i+1]
     return seqs, sequenceList, seq_dict
 ###############################################################################
@@ -191,7 +189,6 @@ def cost_func(NeuralNetwork, training_set, sequenceList):
     for i in range(y):
         labels[i]=sequenceList[i].label
     NeuralNetwork.forwardprop(training_set)
-    print NeuralNetwork.output.shape
     #error = 1/2(y-f(x))^2
     errors = .5*np.square(np.transpose(NeuralNetwork.output)-labels)
     return errors
@@ -226,17 +223,15 @@ def main():
     posseqs, pos_sequenceList, pos_dict = make_training_set(positive_sequences_file)
     #negseqs_string, neg_seq_dict = gen_nmers_from_fa(negative_fa_file, 17, directory, pos_dict)
     negseqs, neg_sequenceList, neg_dict = make_training_set(directory + 'sample_nseqs.txt', 0)
-    #print negseqs.shape
+
+    full_training_set = np.hstack((posseqs, negseqs))
+    full_sequenceList = pos_sequenceList + neg_sequenceList
+    
     NN = Network(posseqs,1,10,'sigmoid')
-    NN.forwardprop(posseqs)
-    errors_pos = cost_func(NN, posseqs, pos_sequenceList)
-    print errors_pos
     
-    
-    
-    NN.forwardprop(negseqs)
-    errors_neg = cost_func(NN, negseqs, neg_sequenceList)
-    print errors_neg
+    NN.forwardprop(full_training_set)
+    errors = cost_func(NN, full_training_set, full_sequenceList)
+    print errors
     return 1
 
 if __name__ == '__main__':

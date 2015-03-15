@@ -47,11 +47,11 @@ class Network:
         #initialize the weights with random small numbers
         for i in range(self.n_inputs+1):
             for j in range(self.n_hidden_nodes+1):
-                self.weights_Hlayer[i,j] = np.random.random()-np.random.random()
+                self.weights_Hlayer[i,j] = np.random.random()*.01
                 
         for k in range(self.n_hidden_nodes+1):
             for m in range(self.n_outputs):
-                self.weights_output[k,m] = np.random.random()-np.random.random()
+                self.weights_output[k,m] = np.random.random()*.01
              
     def forwardprop(self, x):
         #method to calculate new output value
@@ -67,6 +67,7 @@ class Network:
         weights_t_out = np.transpose(self.weights_output)
         #forward propagate using the weights and the values in each layer
         self.Hlayer = np.dot(weights_t, self.input)
+        self.Hlayer_activation = sigmoid(self.Hlayer)
         self.output = sigmoid(np.dot(weights_t_out, sigmoid(self.Hlayer)))
         print 'done forward prop'
               
@@ -182,29 +183,35 @@ def nmers(seq, n, uniq_dict, pos_dict):
 ###############################################################################
 #                                                                             #
 # calc error for training                                                     #
-def cost_func(NeuralNetwork, training_set, sequenceList):
+def cost_func(NN, training_set, sequenceList):
     print 'calculating cost_func'
+    regularization = 1
     [x,y] = training_set.shape
     labels = np.zeros([y,1])
     for i in range(y):
         labels[i]=sequenceList[i].label
-    NeuralNetwork.forwardprop(training_set)
+    NN.forwardprop(training_set)
     #error = 1/2(y-f(x))^2
-    errors = .5*np.square(np.transpose(NeuralNetwork.output)-labels)
-    return errors
+    errors = .5*np.square(np.transpose(NN.output)-labels)
+    sum_weights_Hlayer = np.sum(np.square(NN.weights_Hlayer[0:NN.n_inputs-1, 0:NN.n_hidden_nodes]))
+    sum_weights_output = np.sum(np.square(NN.weights_output[0:NN.n_hidden_nodes,:]))
+    traiing_set_sample_num = len(errors)
+    error = 1/traiing_set_sample_num * np.sum(errors) + regularization*(sum_weights_Hlayer + sum_weights_output)
+    return error
 ###############################################################################
 
 ###############################################################################
 #                                                                             #
 #  train neural network with training set                                     #
 def train_NN(NN, training_set, sequenceList, learning_speed, error_tolerance):
-    errors = .5*np.ones([10,1])
-    while max(errors)> error_tolerance:
+    error = .5
+    while error> error_tolerance:
         #forward propagate with the entire training set
         NN.forwardprop(training_set)
-        errors = cost_func(NN, training_set, sequenceList)
-        backprop(NN, errors)
-        print errors
+        error = cost_func(NN, training_set, sequenceList)
+        
+        backprop(NN, error)
+        print error
         print 1
     return NN
 ###############################################################################

@@ -78,6 +78,7 @@ class Network:
         #forward propagate using the weights and the values in each layer
         self.Hlayer = np.dot(weights_t, self.inputwithbias)
         self.Hlayer_activation = sigmoid(self.Hlayer)
+        self.outputz = np.dot(weights_t_out, np.vstack((sigmoid(self.Hlayer), self.bias_Hlayer)))
         self.output = sigmoid(np.dot(weights_t_out, np.vstack((sigmoid(self.Hlayer), self.bias_Hlayer))))
         print 'done forward prop'
               
@@ -200,29 +201,31 @@ def cost_func(NN, training_set, sequenceList, regularization):
     for i in range(y):
         labels[i]=sequenceList[i].label
     NN.forwardprop(training_set)
+    NN.labels = labels
     #error = 1/2(y-f(x))^2
     errors = .5*np.square(np.transpose(NN.output)-labels)
     sum_weights_Hlayer = np.sum(np.square(NN.weights_Hlayer[0:NN.n_inputs-1, 0:NN.n_hidden_nodes]))
     sum_weights_output = np.sum(np.square(NN.weights_output[0:NN.n_hidden_nodes,:]))
     traiing_set_sample_num = len(errors)
-    error = 1/traiing_set_sample_num * np.sum(errors) + regularization/2*(sum_weights_Hlayer + sum_weights_output)
+    NN.avg_error = 1/traiing_set_sample_num * np.sum(errors) + regularization/2*(sum_weights_Hlayer + sum_weights_output)
     
-    return error
+    return NN
 ###############################################################################
 
 ###############################################################################
 #                                                                             #
 #  train neural network with training set                                     #
 def train_NN(NN, training_set, sequenceList, learning_speed, error_tolerance):
-    error = .5
+    
     regularization = .8
-    while error> error_tolerance:
+    NN.forwardprop(training_set)
+    NN= cost_func(NN, training_set, sequenceList, regularization)
+    while NN.avg_error> error_tolerance:
         #forward propagate with the entire training set
+        print NN.avg_error
+        NN=backprop(NN, learning_speed, regularization)
         NN.forwardprop(training_set)
-        NN.error = cost_func(NN, training_set, sequenceList, regularization)
-        print NN.error
-        backprop(NN, learning_speed, regularization)
-        print error
+        NN = cost_func(NN, training_set, sequenceList, regularization)
         print 1
     return NN
 ###############################################################################
@@ -233,13 +236,24 @@ def train_NN(NN, training_set, sequenceList, learning_speed, error_tolerance):
 #                                                                             #
 # backpropagation to calculate new weights                                    #
 def backprop(NN, learning_speed, regularization):
-    NN.errors_Hlayer = np.dot(np.transpose(NN.weights_output)*NN.error,  NN.Hlayer_activation*(1-NN.Hlayer_activation))
+    diff = np.transpose(NN.labels)- NN.output
+    NN.errors_output = -diff* NN.outputz*(1-NN.outputz)
+    NN.errors_Hlayer = np.dot(np.transpose(NN.weights_output)*NN.errors_output,  NN.Hlayer_activation*(1-NN.Hlayer_activation))
+    
+    print NN.errors_output.shape
     delta_weights_output = np.zeros([NN.n_outputs, NN.n_hidden_nodes])
     delta_weights_Hlayer = np.zeros([NN.n_hidden_nodes, NN.n_inputs])
-    delta_weights_output=delta_weights_output+np.dot(NN.error, np.transpose(NN.Hlayer_activation))
+    delta_weights_output=delta_weights_output+np.dot(np.transpose(NN.errors_output), np.transpose(NN.Hlayer_activation))
     delta_weights_Hlayer= delta_weights_Hlayer+np.dot(NN.errors_Hlayer, np.transpose(NN.input))
-    #NN.weights_output = 1/NN.inputshapey * 
-      #error = 1/traiing_set_sample_num * np.sum(errors) + regularization/2*(sum_weights_Hlayer + sum_weights_output)
+
+    delta_bias_weights_output = NN.error
+    delta_bias_weights_Hlayer = NN.errors_Hlayer
+    
+    NN.weights_output =NN.weights_output-learning_speed*( 1/NN.inputshapey * delta_weights_output + regularization* NN.weights_output)
+    NN.bias_weights_output = NN.bias_weights_output-learning_speed*(1/NN.inputshapey * delta_bias_weights_output)
+    
+    NN.weights_Hlayer = NN.weights_Hlayer- learning_speed*(1/NN.inputshapey * delta_weights_Hlayer + regularization* NN.weights_Hlayer)
+    NN.bias_weights_Hlayer = NN.bias_weights_Hlayer -learning_speed*(1/NN.inputshapey * delta_bias_weights_Hlayer)
     
     print 1
     return NN
@@ -278,7 +292,7 @@ def main():
     full_sequenceList = pos_sequenceList + neg_sequenceList
     #initiate the neural network
     NN = Network(posseqs,1,10,'sigmoid')
-    train_NN(NN, full_training_set, full_sequenceList, learning_speed = .3, error_tolerance = .3)
+    train_NN(NN, full_training_set, full_sequenceList, learning_speed = .3, error_tolerance = 1e-5)
     
     return 1
 

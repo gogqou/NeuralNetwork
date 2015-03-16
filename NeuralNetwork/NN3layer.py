@@ -31,44 +31,53 @@ class Network:
 
     def __init__(self, inputx, outputnum, hiddennodes, activation_func ):
         [self.inputshapex, self.inputshapey] = inputx.shape
-        self.bias = np.ones([1, self.inputshapey]) #always just set bias term to 1
         self.input = inputx        
         self.n_inputs = self.inputshapex #allows you to set how many inputs are in the first layer
         self.n_outputs = outputnum #allows you to set how many outputs come from the neural network
         self.n_hidden_nodes = hiddennodes
-        self.Hlayer = np.zeros([hiddennodes+1, 1]) #add 1 to make space for the bias node
-        self.weights_Hlayer = np.ones([self.n_inputs+1, hiddennodes+1]) 
-        #add one to each dimension to add space for the bias nodes in input and hidden layers
-        self.weights_output = np.ones([hiddennodes+1,self.n_outputs])
         
-        #add one in vertical dimension to make space for bias node in hidden layer
-
-        self.input = np.vstack((self.input, self.bias))
+        self.Hlayer = np.zeros([hiddennodes, self.inputshapey]) 
+        self.weights_Hlayer = np.ones([self.n_inputs, hiddennodes]) 
+        self.weights_output = np.ones([hiddennodes,self.n_outputs])
+        
+        
+        
+        self.bias_input = np.ones([1, self.inputshapey]) #always just set bias term to 1
+        self.bias_weights_Hlayer = np.zeros([self.n_hidden_nodes,1])
+        self.bias_Hlayer = np.ones([1, self.inputshapey])
+        self.bias_weights_output = np.zeros([1, self.n_outputs])
+        
         #initialize the weights with random small numbers
-        for i in range(self.n_inputs+1):
-            for j in range(self.n_hidden_nodes+1):
+        for i in range(self.n_inputs):
+            for j in range(self.n_hidden_nodes):
                 self.weights_Hlayer[i,j] = np.random.random()*.01
                 
-        for k in range(self.n_hidden_nodes+1):
+        for k in range(self.n_hidden_nodes):
             for m in range(self.n_outputs):
                 self.weights_output[k,m] = np.random.random()*.01
+        for p in range(self.n_hidden_nodes):
+            self.bias_weights_Hlayer[p] = np.random.random()*.01
+        self.bias_weights_Hlayer = np.transpose(self.bias_weights_Hlayer)
+        for q in range(self.n_outputs):
+            self.bias_weights_output[q] = np.random.random()*.01
              
     def forwardprop(self, x):
         #method to calculate new output value
         [self.inputshapex, self.inputshapey] = x.shape
-        self.bias = np.ones([1, self.inputshapey]) #always just set bias term to 1
+        self.bias_input = np.ones([1, self.inputshapey]) #always just set bias term to 1
+        self.bias_Hlayer = np.ones([1, self.inputshapey])
         self.input = x        
         self.n_inputs = self.inputshapex
-        self.input = np.vstack((self.input, self.bias))
+        self.inputwithbias = np.vstack((self.input, self.bias_input))
         
         #add on the bias node to input
         #set up transpose of the weights matrices for matrix multiplication
-        weights_t = np.transpose(self.weights_Hlayer)
-        weights_t_out = np.transpose(self.weights_output)
+        weights_t = np.transpose(np.vstack((self.weights_Hlayer, self.bias_weights_Hlayer)))
+        weights_t_out = np.transpose(np.vstack((self.weights_output, self.bias_weights_output)))
         #forward propagate using the weights and the values in each layer
-        self.Hlayer = np.dot(weights_t, self.input)
+        self.Hlayer = np.dot(weights_t, self.inputwithbias)
         self.Hlayer_activation = sigmoid(self.Hlayer)
-        self.output = sigmoid(np.dot(weights_t_out, sigmoid(self.Hlayer)))
+        self.output = sigmoid(np.dot(weights_t_out, np.vstack((sigmoid(self.Hlayer), self.bias_Hlayer))))
         print 'done forward prop'
               
         
@@ -183,9 +192,8 @@ def nmers(seq, n, uniq_dict, pos_dict):
 ###############################################################################
 #                                                                             #
 # calc error for training                                                     #
-def cost_func(NN, training_set, sequenceList):
+def cost_func(NN, training_set, sequenceList, regularization):
     print 'calculating cost_func'
-    regularization = 1
     [x,y] = training_set.shape
     labels = np.zeros([y,1])
     for i in range(y):
@@ -196,7 +204,8 @@ def cost_func(NN, training_set, sequenceList):
     sum_weights_Hlayer = np.sum(np.square(NN.weights_Hlayer[0:NN.n_inputs-1, 0:NN.n_hidden_nodes]))
     sum_weights_output = np.sum(np.square(NN.weights_output[0:NN.n_hidden_nodes,:]))
     traiing_set_sample_num = len(errors)
-    error = 1/traiing_set_sample_num * np.sum(errors) + regularization*(sum_weights_Hlayer + sum_weights_output)
+    error = 1/traiing_set_sample_num * np.sum(errors) + regularization/2*(sum_weights_Hlayer + sum_weights_output)
+    
     return error
 ###############################################################################
 
@@ -205,12 +214,13 @@ def cost_func(NN, training_set, sequenceList):
 #  train neural network with training set                                     #
 def train_NN(NN, training_set, sequenceList, learning_speed, error_tolerance):
     error = .5
+    regularization = .8
     while error> error_tolerance:
         #forward propagate with the entire training set
         NN.forwardprop(training_set)
-        error = cost_func(NN, training_set, sequenceList)
+        NN.error = cost_func(NN, training_set, sequenceList, regularization)
         
-        backprop(NN, error)
+        backprop(NN)
         print error
         print 1
     return NN
@@ -221,9 +231,13 @@ def train_NN(NN, training_set, sequenceList, learning_speed, error_tolerance):
 ###############################################################################
 #                                                                             #
 # backpropagation to calculate new weights                                    #
-def backprop(NeuralNetwork, errors):
+def backprop(NN):
+    NN.errors_Hlayer = np.transpose(NN.weights_output)*NN.error * NN.Hlayer_activation(1-NN.Hlayer_activation)
+    delta_weights_output = np.zeros([NN.n_hidden_nodes, NN.n_outputs])
+    delta_weights_Hlayer = np.zeros([NN.n_inputs, NN.n_hidden_nodes])
+    delta_weights_output=delta_weights_output+NN.errors_Hlayer * np.transpose(NN.Hlayer_activation[0:])
     print 1
-    return NeuralNetwork
+    return NN
 ###############################################################################
 
 

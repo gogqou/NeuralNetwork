@@ -37,27 +37,27 @@ class Network:
         self.n_hidden_nodes = hiddennodes
         
         self.Hlayer = np.zeros([hiddennodes, self.inputshapey]) 
-        self.weights_Hlayer = np.ones([self.n_inputs, hiddennodes]) 
-        self.weights_output = np.ones([hiddennodes,self.n_outputs])
+        self.weights_Hlayer = np.ones([hiddennodes, self.n_inputs]) 
+        self.weights_output = np.ones([self.n_outputs, hiddennodes])
         
         
         
         self.bias_input = np.ones([1, self.inputshapey]) #always just set bias term to 1
         self.bias_weights_Hlayer = np.zeros([self.n_hidden_nodes,1])
         self.bias_Hlayer = np.ones([1, self.inputshapey])
-        self.bias_weights_output = np.zeros([1, self.n_outputs])
+        self.bias_weights_output = np.zeros([self.n_outputs,1])
         
         #initialize the weights with random small numbers
-        for i in range(self.n_inputs):
-            for j in range(self.n_hidden_nodes):
+        for i in range(self.n_hidden_nodes):
+            for j in range(self.n_inputs):
                 self.weights_Hlayer[i,j] = np.random.random()*.01
                 
-        for k in range(self.n_hidden_nodes):
-            for m in range(self.n_outputs):
+        for k in range(self.n_outputs):
+            for m in range(self.n_hidden_nodes):
                 self.weights_output[k,m] = np.random.random()*.01
         for p in range(self.n_hidden_nodes):
             self.bias_weights_Hlayer[p] = np.random.random()*.01
-        self.bias_weights_Hlayer = np.transpose(self.bias_weights_Hlayer)
+        
         for q in range(self.n_outputs):
             self.bias_weights_output[q] = np.random.random()*.01
              
@@ -72,8 +72,8 @@ class Network:
         
         #add on the bias node to input
         #set up transpose of the weights matrices for matrix multiplication
-        weights_t = np.transpose(np.vstack((self.weights_Hlayer, self.bias_weights_Hlayer)))
-        weights_t_out = np.transpose(np.vstack((self.weights_output, self.bias_weights_output)))
+        weights_t = np.hstack((self.weights_Hlayer, self.bias_weights_Hlayer))
+        weights_t_out = np.hstack((self.weights_output, self.bias_weights_output))
         
         #forward propagate using the weights and the values in each layer
         self.Hlayer = np.dot(weights_t, self.inputwithbias)
@@ -236,17 +236,17 @@ def train_NN(NN, training_set, sequenceList, learning_speed, error_tolerance):
 #                                                                             #
 # backpropagation to calculate new weights                                    #
 def backprop(NN, learning_speed, regularization):
-    diff = np.transpose(NN.labels)- NN.output
-    NN.errors_output = -diff* NN.outputz*(1-NN.outputz)
-    NN.errors_Hlayer = np.dot(np.transpose(NN.weights_output)*NN.errors_output,  NN.Hlayer_activation*(1-NN.Hlayer_activation))
     
-    print NN.errors_output.shape
+    NN.errors_output = -np.transpose(NN.labels)- NN.output* NN.outputz*(1-NN.outputz)
+    NN.errors_Hlayer = np.dot(np.transpose(NN.weights_output), NN.errors_output)* NN.Hlayer_activation*(1-NN.Hlayer_activation)
+
     delta_weights_output = np.zeros([NN.n_outputs, NN.n_hidden_nodes])
     delta_weights_Hlayer = np.zeros([NN.n_hidden_nodes, NN.n_inputs])
-    delta_weights_output=delta_weights_output+np.dot(np.transpose(NN.errors_output), np.transpose(NN.Hlayer_activation))
+    
+    delta_weights_output=delta_weights_output+np.dot(NN.errors_output, np.transpose(NN.Hlayer_activation))
     delta_weights_Hlayer= delta_weights_Hlayer+np.dot(NN.errors_Hlayer, np.transpose(NN.input))
 
-    delta_bias_weights_output = NN.error
+    delta_bias_weights_output = NN.errors_output
     delta_bias_weights_Hlayer = NN.errors_Hlayer
     
     NN.weights_output =NN.weights_output-learning_speed*( 1/NN.inputshapey * delta_weights_output + regularization* NN.weights_output)
@@ -255,7 +255,7 @@ def backprop(NN, learning_speed, regularization):
     NN.weights_Hlayer = NN.weights_Hlayer- learning_speed*(1/NN.inputshapey * delta_weights_Hlayer + regularization* NN.weights_Hlayer)
     NN.bias_weights_Hlayer = NN.bias_weights_Hlayer -learning_speed*(1/NN.inputshapey * delta_bias_weights_Hlayer)
     
-    print 1
+
     return NN
 ###############################################################################
 

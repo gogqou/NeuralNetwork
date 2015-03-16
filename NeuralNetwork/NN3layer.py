@@ -74,6 +74,7 @@ class Network:
         #set up transpose of the weights matrices for matrix multiplication
         weights_t = np.transpose(np.vstack((self.weights_Hlayer, self.bias_weights_Hlayer)))
         weights_t_out = np.transpose(np.vstack((self.weights_output, self.bias_weights_output)))
+        
         #forward propagate using the weights and the values in each layer
         self.Hlayer = np.dot(weights_t, self.inputwithbias)
         self.Hlayer_activation = sigmoid(self.Hlayer)
@@ -219,8 +220,8 @@ def train_NN(NN, training_set, sequenceList, learning_speed, error_tolerance):
         #forward propagate with the entire training set
         NN.forwardprop(training_set)
         NN.error = cost_func(NN, training_set, sequenceList, regularization)
-        
-        backprop(NN)
+        print NN.error
+        backprop(NN, learning_speed, regularization)
         print error
         print 1
     return NN
@@ -231,11 +232,15 @@ def train_NN(NN, training_set, sequenceList, learning_speed, error_tolerance):
 ###############################################################################
 #                                                                             #
 # backpropagation to calculate new weights                                    #
-def backprop(NN):
-    NN.errors_Hlayer = np.transpose(NN.weights_output)*NN.error * NN.Hlayer_activation(1-NN.Hlayer_activation)
-    delta_weights_output = np.zeros([NN.n_hidden_nodes, NN.n_outputs])
-    delta_weights_Hlayer = np.zeros([NN.n_inputs, NN.n_hidden_nodes])
-    delta_weights_output=delta_weights_output+NN.errors_Hlayer * np.transpose(NN.Hlayer_activation[0:])
+def backprop(NN, learning_speed, regularization):
+    NN.errors_Hlayer = np.dot(np.transpose(NN.weights_output)*NN.error,  NN.Hlayer_activation*(1-NN.Hlayer_activation))
+    delta_weights_output = np.zeros([NN.n_outputs, NN.n_hidden_nodes])
+    delta_weights_Hlayer = np.zeros([NN.n_hidden_nodes, NN.n_inputs])
+    delta_weights_output=delta_weights_output+np.dot(NN.error, np.transpose(NN.Hlayer_activation))
+    delta_weights_Hlayer= delta_weights_Hlayer+np.dot(NN.errors_Hlayer, np.transpose(NN.input))
+    #NN.weights_output = 1/NN.inputshapey * 
+      #error = 1/traiing_set_sample_num * np.sum(errors) + regularization/2*(sum_weights_Hlayer + sum_weights_output)
+    
     print 1
     return NN
 ###############################################################################

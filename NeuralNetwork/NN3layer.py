@@ -50,26 +50,27 @@ class Network:
         #initialize the weights with random small numbers
         for i in range(self.n_hidden_nodes):
             for j in range(self.n_inputs):
-                self.weights_Hlayer[i,j] = np.random.random()*.01
+                self.weights_Hlayer[i,j] = np.random.random()
                 
         for k in range(self.n_outputs):
             for m in range(self.n_hidden_nodes):
-                self.weights_output[k,m] = np.random.random()*.01
+                self.weights_output[k,m] = np.random.random()
         for p in range(self.n_hidden_nodes):
-            self.bias_weights_Hlayer[p] = np.random.random()*.01
+            self.bias_weights_Hlayer[p] = np.random.random()
         
         for q in range(self.n_outputs):
-            self.bias_weights_output[q] = np.random.random()*.01
+            self.bias_weights_output[q] = np.random.random()
              
     def forwardprop(self, x):
         #method to calculate new output value
         [self.inputshapex, self.inputshapey] = x.shape
+        
         self.bias_input = np.ones([1, self.inputshapey]) #always just set bias term to 1
         self.bias_Hlayer = np.ones([1, self.inputshapey])
         self.input = x        
         self.n_inputs = self.inputshapex
         self.inputwithbias = np.vstack((self.input, self.bias_input))
-        
+        print self.input
         #add on the bias node to input
         #set up transpose of the weights matrices for matrix multiplication
         weights_t = np.hstack((self.weights_Hlayer, self.bias_weights_Hlayer))
@@ -78,8 +79,17 @@ class Network:
         #forward propagate using the weights and the values in each layer
         self.Hlayer = np.dot(weights_t, self.inputwithbias)
         self.Hlayer_activation = sigmoid(self.Hlayer)
+        print 'weights'
+        print weights_t
+        print weights_t_out
+        print 'Hlayer'
+        print self.Hlayer
+        print self.Hlayer_activation
         self.outputz = np.dot(weights_t_out, np.vstack((sigmoid(self.Hlayer), self.bias_Hlayer)))
+        print 'output'
+        print self.outputz
         self.output = sigmoid(self.outputz)
+        print self.output
         print 'done forward prop'
               
         
@@ -121,7 +131,7 @@ def sigmoid(x):
 def make_training_set(file, posorneg= 1):
     
     file_lines = readtxt(file)
-    seqs = np.zeros([68, 1])
+    seqs = np.zeros([16, 1])
     
     seq_dict = {}
     sequenceList = []
@@ -234,13 +244,15 @@ def cost_func(NN, training_set, sequenceList, regularization):
         labels[i]=sequenceList[i].label
     NN.forwardprop(training_set)
     NN.labels = labels
+    print NN.output
     #error = 1/2(y-f(x))^2
     errors = .5*np.square(np.transpose(NN.output)-labels)
-    sum_weights_Hlayer = np.sum(np.square(NN.weights_Hlayer[0:NN.n_inputs-1, 0:NN.n_hidden_nodes]))
-    sum_weights_output = np.sum(np.square(NN.weights_output[0:NN.n_hidden_nodes,:]))
+    print errors
+    sum_weights_Hlayer = np.sum(np.square(NN.weights_Hlayer))
+    sum_weights_output = np.sum(np.square(NN.weights_output))
     training_set_sample_num = len(errors)
-    NN.avg_error = 1/training_set_sample_num * np.sum(errors) + regularization/2*(sum_weights_Hlayer + sum_weights_output)
-    
+    #NN.avg_error = 1/training_set_sample_num * np.sum(errors) + regularization/2*(sum_weights_Hlayer + sum_weights_output)
+    NN.avg_error = 1/training_set_sample_num * np.sum(errors)
     return NN
 ###############################################################################
 
@@ -250,14 +262,15 @@ def cost_func(NN, training_set, sequenceList, regularization):
 #  train neural network with training set                                     #
 def train_NN(NN, training_set, sequenceList, learning_speed, error_tolerance):
     
-    regularization = .2
+    regularization = .8
     NN.forwardprop(training_set)
     NN= cost_func(NN, training_set, sequenceList, regularization)
     while NN.avg_error> error_tolerance:
         #forward propagate with the entire training set
-        print NN.avg_error
+        print 'error= ', NN.avg_error
         NN=backprop(NN, learning_speed, regularization)
-        NN.forwardprop(training_set)
+        print NN.weights_Hlayer
+        print NN.weights_output
         NN = cost_func(NN, training_set, sequenceList, regularization)
     return NN
 ###############################################################################
@@ -291,20 +304,22 @@ def main():
     #from which we took a sample and put into sample_nseqs.txt
     
     #makes training set of the negative sequences
-    negseqs, neg_sequenceList, neg_dict = make_training_set(directory + 'sample_nseqs.txt', 0)
+    #negseqs, neg_sequenceList, neg_dict = make_training_set(directory + 'sample_nseqs.txt', 0)
     
-    
+    negseqs, neg_sequenceList, neg_dict = make_training_set(directory + 'negatives.txt', 0)
     #puts the pos and neg sets together
     full_training_set = np.hstack((posseqs, negseqs))
     full_sequenceList = pos_sequenceList + neg_sequenceList
-    
+    print full_training_set
     #initiate the neural network
-    NN = Network(posseqs,1,10,'sigmoid')
-    NN= train_NN(NN, full_training_set, full_sequenceList, learning_speed = .1, error_tolerance = 1e-6)
-    
+    NN = Network(posseqs,1,3,'sigmoid')
+    NN.forwardprop(full_training_set)
+    #NN= train_NN(NN, full_training_set, full_sequenceList, learning_speed = .1, error_tolerance = .4)
+    '''
     test_output_file_name = 'test_output.txt'
     testseqs, test_sequenceList, test_dict = make_training_set(test_file, 0.5)
     test_NN(NN, testseqs, test_sequenceList, directory + test_output_file_name)
+    '''
     return 1
 
 if __name__ == '__main__':

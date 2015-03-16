@@ -79,15 +79,17 @@ class Network:
         #forward propagate using the weights and the values in each layer
         self.Hlayer = np.dot(weights_t, self.inputwithbias)
         self.Hlayer_activation = sigmoid(self.Hlayer)
+        '''
         print 'weights'
         print weights_t
         print weights_t_out
         print 'Hlayer'
         print self.Hlayer
         print self.Hlayer_activation
+        '''
         self.outputz = np.dot(weights_t_out, np.vstack((sigmoid(self.Hlayer), self.bias_Hlayer)))
-        print 'output'
-        print self.outputz
+        #print 'output'
+        #print self.outputz
         self.output = sigmoid(self.outputz)
         print self.output
         print 'done forward prop'
@@ -202,7 +204,7 @@ def nmers(seq, n, uniq_dict, pos_dict):
 # backpropagation to calculate new weights                                    #
 def backprop(NN, learning_speed, regularization):
     
-    NN.errors_output = -np.transpose(NN.labels)- NN.output* NN.outputz*(1-NN.outputz)
+    NN.errors_output = -np.transpose(NN.labels)- NN.output* NN.output*(1-NN.output)
     NN.errors_Hlayer = np.dot(np.transpose(NN.weights_output), NN.errors_output)* NN.Hlayer_activation*(1-NN.Hlayer_activation)
     
     #initalizes delta matrices
@@ -314,7 +316,7 @@ def main():
     #initiate the neural network
     NN = Network(posseqs,1,3,'sigmoid')
     NN.forwardprop(full_training_set)
-    #NN= train_NN(NN, full_training_set, full_sequenceList, learning_speed = .1, error_tolerance = .4)
+    NN= train_NN(NN, full_training_set, full_sequenceList, learning_speed = .01, error_tolerance = 1e-6)
     '''
     test_output_file_name = 'test_output.txt'
     testseqs, test_sequenceList, test_dict = make_training_set(test_file, 0.5)

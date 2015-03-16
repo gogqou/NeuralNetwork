@@ -72,14 +72,16 @@ class Network:
         
         #add on the bias node to input
         #set up transpose of the weights matrices for matrix multiplication
-        weights_t = np.hstack((self.weights_Hlayer, self.bias_weights_Hlayer))
-        weights_t_out = np.hstack((self.weights_output, self.bias_weights_output))
+        #weights_t = np.hstack((self.weights_Hlayer, self.bias_weights_Hlayer))
+        #weights_t_out = np.hstack((self.weights_output, self.bias_weights_output))
         
         #forward propagate using the weights and the values in each layer
-        self.Hlayer = np.dot(weights_t, self.inputwithbias)
+        #self.Hlayer = np.dot(weights_t, self.inputwithbias)
+        self.Hlayer = np.dot(self.weights_Hlayer, self.input)
         self.Hlayer_activation = sigmoid(self.Hlayer)
-        self.outputz = np.dot(weights_t_out, np.vstack((sigmoid(self.Hlayer), self.bias_Hlayer)))
-        self.output = sigmoid(np.dot(weights_t_out, np.vstack((sigmoid(self.Hlayer), self.bias_Hlayer))))
+        self.outputz = np.dot(self.weights_output, self.Hlayer_activation)
+        #self.outputz = np.dot(weights_t_out, np.vstack((sigmoid(self.Hlayer), self.bias_Hlayer)))
+        self.output = sigmoid(self.outputz)
         print 'done forward prop'
               
         
@@ -250,11 +252,11 @@ def backprop(NN, learning_speed, regularization):
     delta_bias_weights_Hlayer = NN.errors_Hlayer
     
     NN.weights_output =NN.weights_output-learning_speed*( 1/NN.inputshapey * delta_weights_output + regularization* NN.weights_output)
-    NN.bias_weights_output = NN.bias_weights_output-learning_speed*(1/NN.inputshapey * delta_bias_weights_output)
+    #NN.bias_weights_output = NN.bias_weights_output-learning_speed*(1/NN.inputshapey * delta_bias_weights_output)
     
     NN.weights_Hlayer = NN.weights_Hlayer- learning_speed*(1/NN.inputshapey * delta_weights_Hlayer + regularization* NN.weights_Hlayer)
-    NN.bias_weights_Hlayer = NN.bias_weights_Hlayer -learning_speed*(1/NN.inputshapey * delta_bias_weights_Hlayer)
-    
+    #NN.bias_weights_Hlayer = NN.bias_weights_Hlayer -learning_speed*(1/NN.inputshapey * delta_bias_weights_Hlayer)
+
 
     return NN
 ###############################################################################
@@ -291,8 +293,8 @@ def main():
     full_training_set = np.hstack((posseqs, negseqs))
     full_sequenceList = pos_sequenceList + neg_sequenceList
     #initiate the neural network
-    NN = Network(posseqs,1,10,'sigmoid')
-    train_NN(NN, full_training_set, full_sequenceList, learning_speed = .3, error_tolerance = 1e-5)
+    NN = Network(posseqs,1,15,'sigmoid')
+    train_NN(NN, full_training_set, full_sequenceList, learning_speed = .1, error_tolerance = 1e-6)
     
     return 1
 

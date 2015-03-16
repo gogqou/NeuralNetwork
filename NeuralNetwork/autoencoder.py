@@ -191,8 +191,8 @@ def cost_func(NN, training_set, regularization):
     sum_weights_Hlayer = np.sum(np.square(NN.weights_Hlayer))
     sum_weights_output = np.sum(np.square(NN.weights_output))
     training_set_sample_num = len(errors)
-    NN.avg_error = 1/training_set_sample_num * np.sum(errors) + regularization/2*(sum_weights_Hlayer + sum_weights_output)
-    
+    #NN.avg_error = 1/training_set_sample_num * np.sum(errors) + regularization/2*(sum_weights_Hlayer + sum_weights_output)
+    NN.avg_error = 1.0/training_set_sample_num * np.sum(errors) 
     return NN
 ###############################################################################
 
@@ -205,6 +205,7 @@ def train_NN(NN, training_set, learning_speed, error_tolerance):
     regularization = .3
     NN.forwardprop(training_set)
     NN= cost_func(NN, training_set, regularization)
+    print NN.avg_error
     while NN.avg_error> error_tolerance:
         #forward propagate with the entire training set
         print 'error= ', NN.avg_error
@@ -234,10 +235,9 @@ def main():
     inputs = np.random.randint(2, size = (4,2))
     #initiate the neural network
     NN = Network(inputs,4,3,'sigmoid')
-    NN.forwardprop(inputs)
-    NN= backprop(NN, learning_speed=.15, regularization=.3)
-    NN.forwardprop(inputs)
-    #NN= train_NN(NN, inputs, learning_speed = .15, error_tolerance = 1e-3)
+    #NN.forwardprop(inputs)
+    #NN= backprop(NN, learning_speed=.15, regularization=.3)
+    NN= train_NN(NN, inputs, learning_speed = .15, error_tolerance = 1e-3)
     '''
     test_output_file_name = 'test_output.txt'
     testseqs, test_sequenceList, test_dict = make_training_set(test_file, 0.5)

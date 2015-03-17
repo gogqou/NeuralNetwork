@@ -112,13 +112,13 @@ class Sequence:
         for i in range(self.length): 
             j = i*4
             if self.seq[i] is 'A':
-                self.vector_rep[j] = 1
+                self.vector_rep[j] = 1.0
             elif self.seq[i] is 'T':
-                self.vector_rep[j+1] = 1
+                self.vector_rep[j+1] = 1.0
             elif self.seq[i] is 'C':
-                self.vector_rep[j+2] = 1
+                self.vector_rep[j+2] = 1.0
             elif self.seq[i] is 'G':
-                self.vector_rep[j+3] = 1
+                self.vector_rep[j+3] = 1.0
             else:
                 print 'nucleotide not found'
                 break
@@ -249,8 +249,8 @@ def cost_func(NN, training_set, sequenceList, regularization):
     sum_weights_Hlayer = np.sum(np.square(NN.weights_Hlayer))
     sum_weights_output = np.sum(np.square(NN.weights_output))
     training_set_sample_num = len(errors)
-    #NN.avg_error = 1.0/training_set_sample_num * np.sum(errors) + regularization/2*(sum_weights_Hlayer + sum_weights_output)
-    NN.avg_error = 1.0/training_set_sample_num * np.sum(errors)
+    NN.avg_error = 1.0/training_set_sample_num * np.sum(errors) + regularization/2*(sum_weights_Hlayer + sum_weights_output)
+    #NN.avg_error = 1.0/training_set_sample_num * np.sum(errors)
     return NN
 ###############################################################################
 

@@ -59,16 +59,16 @@ class Network:
         #initialize the weights with random small numbers
         for i in range(self.n_hidden_nodes):
             for j in range(self.n_inputs):
-                self.weights_Hlayer[i,j] = np.random.uniform(-1, 1)
+                self.weights_Hlayer[i,j] = np.random.uniform(-5, 5)
                 
         for k in range(self.n_outputs):
             for m in range(self.n_hidden_nodes):
-                self.weights_output[k,m] = np.random.uniform(-1, 1)
+                self.weights_output[k,m] = np.random.uniform(-5, 5)
         for p in range(self.n_hidden_nodes):
-            self.bias_weights_Hlayer[p] = np.random.uniform(-1, 1)
+            self.bias_weights_Hlayer[p] = np.random.uniform(-5, 5)
         
         for q in range(self.n_outputs):
-            self.bias_weights_output[q] = np.random.uniform(-1, 1)
+            self.bias_weights_output[q] = np.random.uniform(-5, 5)
              
     def forwardprop(self, x):
         #method to calculate new output value
@@ -137,10 +137,9 @@ def backprop(NN, learning_speed, regularization):
     print 'diff'
     print NN.input-NN.output
     print '1-output'
-    
     print (1-NN.output)
     
-    NN.errors_output = -(NN.input- NN.output)* NN.output*(1-NN.output)
+    NN.errors_output = (NN.input- NN.output)* NN.output*(1-NN.output)
     NN.errors_Hlayer = np.dot(np.transpose(NN.weights_output), NN.errors_output)* NN.Hlayer_activation*(1-NN.Hlayer_activation)
     
     print 'errors'
@@ -180,11 +179,12 @@ def backprop(NN, learning_speed, regularization):
     #we don't apply regularization to the bias weights
     NN.weights_Hlayer = NN.weights_Hlayer- learning_speed*(1/NN.inputshapey * delta_weights_Hlayer + regularization* NN.weights_Hlayer)
     NN.bias_weights_Hlayer = NN.bias_weights_Hlayer -learning_speed*(1/NN.inputshapey * delta_bias_weights_Hlayer)
-
+    
     print 'new weights'
     print NN.weights_output
     print 'Hlayer'
     print NN.weights_Hlayer
+    
     return NN
 ###############################################################################
 
@@ -202,8 +202,8 @@ def cost_func(NN, training_set, regularization):
     sum_weights_Hlayer = np.sum(np.square(NN.weights_Hlayer))
     sum_weights_output = np.sum(np.square(NN.weights_output))
     training_set_sample_num = len(errors)
-    #NN.avg_error = 1/training_set_sample_num * np.sum(errors) + regularization/2*(sum_weights_Hlayer + sum_weights_output)
-    NN.avg_error = 1.0/training_set_sample_num * np.sum(errors) 
+    NN.avg_error = 1.0/training_set_sample_num * np.sum(errors) + regularization/2*(sum_weights_Hlayer + sum_weights_output)
+    #NN.avg_error = 1.0/training_set_sample_num * np.sum(errors) 
     return NN
 ###############################################################################
 
@@ -213,7 +213,7 @@ def cost_func(NN, training_set, regularization):
 #  train neural network with training set                                     #
 def train_NN(NN, training_set, learning_speed, error_tolerance):
     
-    regularization = .3
+    regularization = .1
     NN.forwardprop(training_set)
     NN= cost_func(NN, training_set, regularization)
     error_change = 5
@@ -246,14 +246,17 @@ def main():
     np.set_printoptions(threshold=1000, linewidth=1000, precision = 5, suppress = False)
 
     directory = '/home/gogqou/Documents/Classes/bmi203-final-project/'
-    inputs = np.random.randint(2, size = (4,3))
+    inputs = np.random.randint(2, size = (8,4)).astype(float)
     #initiate the neural network
-    NN = Network(inputs,4,3,'sigmoid')
+    
+    NN = Network(inputs,8,3,'sigmoid')
+    
     NN.forwardprop(inputs)
     NN= backprop(NN, learning_speed=.15, regularization=.3)
     NN.forwardprop(inputs)
     NN= backprop(NN, learning_speed=.15, regularization=.3)
-    #NN= train_NN(NN, inputs, learning_speed = .15, error_tolerance = 1e-2)
+    
+    #NN= train_NN(NN, inputs, learning_speed = .15, error_tolerance = 1e-5)
     '''
     test_output_file_name = 'test_output.txt'
     testseqs, test_sequenceList, test_dict = make_training_set(test_file, 0.5)

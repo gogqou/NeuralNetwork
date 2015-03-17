@@ -59,16 +59,16 @@ class Network:
         #initialize the weights with random small numbers
         for i in range(self.n_hidden_nodes):
             for j in range(self.n_inputs):
-                self.weights_Hlayer[i,j] = np.random.random()
+                self.weights_Hlayer[i,j] = np.random.uniform(-1, 1)
                 
         for k in range(self.n_outputs):
             for m in range(self.n_hidden_nodes):
-                self.weights_output[k,m] = np.random.random()
+                self.weights_output[k,m] = np.random.uniform(-1, 1)
         for p in range(self.n_hidden_nodes):
-            self.bias_weights_Hlayer[p] = np.random.random()
+            self.bias_weights_Hlayer[p] = np.random.uniform(-1, 1)
         
         for q in range(self.n_outputs):
-            self.bias_weights_output[q] = np.random.random()
+            self.bias_weights_output[q] = np.random.uniform(-1, 1)
              
     def forwardprop(self, x):
         #method to calculate new output value
@@ -79,7 +79,6 @@ class Network:
         self.input = x        
         self.n_inputs = self.inputshapex
         self.inputwithbias = np.vstack((self.input, self.bias_input))
-        print self.input
         #add on the bias node to input
         #set up transpose of the weights matrices for matrix multiplication
         weights_t = np.hstack((self.weights_Hlayer, self.bias_weights_Hlayer))
@@ -100,7 +99,6 @@ class Network:
         #print 'output'
         #print self.outputz
         self.output = sigmoid(self.outputz)
-        print self.output
         print 'done forward prop'
               
         
@@ -132,18 +130,22 @@ def writetxt2(seqList, filename):
 #                                                                             #
 # backpropagation to calculate new weights                                    #
 def backprop(NN, learning_speed, regularization):
+    
     print 'outputs'
     print NN.output
     print NN.input
+    print 'diff'
     print NN.input-NN.output
-    print NN.output
-    print NN.output*(1-NN.output)
+    print '1-output'
+    
+    print (1-NN.output)
     
     NN.errors_output = -(NN.input- NN.output)* NN.output*(1-NN.output)
     NN.errors_Hlayer = np.dot(np.transpose(NN.weights_output), NN.errors_output)* NN.Hlayer_activation*(1-NN.Hlayer_activation)
     
     print 'errors'
     print NN.errors_output
+    print 'Hlayer'
     print NN.errors_Hlayer
     
     #initalizes delta matrices
@@ -156,8 +158,14 @@ def backprop(NN, learning_speed, regularization):
     delta_weights_output=delta_weights_output+np.dot(NN.errors_output, np.transpose(NN.Hlayer_activation))
     delta_weights_Hlayer= delta_weights_Hlayer+np.dot(NN.errors_Hlayer, np.transpose(NN.input))
     
+    print 'weights'
+    print NN.weights_output
+    print 'Hlayer'
+    print NN.weights_Hlayer
+    
     print 'delta weights'
     print delta_weights_output
+    print 'Hlayer'
     print delta_weights_Hlayer
     
     # for the biases, we have to multiply the error by the activation, which in this case is just 
@@ -173,7 +181,10 @@ def backprop(NN, learning_speed, regularization):
     NN.weights_Hlayer = NN.weights_Hlayer- learning_speed*(1/NN.inputshapey * delta_weights_Hlayer + regularization* NN.weights_Hlayer)
     NN.bias_weights_Hlayer = NN.bias_weights_Hlayer -learning_speed*(1/NN.inputshapey * delta_bias_weights_Hlayer)
 
-
+    print 'new weights'
+    print NN.weights_output
+    print 'Hlayer'
+    print NN.weights_Hlayer
     return NN
 ###############################################################################
 
@@ -205,12 +216,15 @@ def train_NN(NN, training_set, learning_speed, error_tolerance):
     regularization = .3
     NN.forwardprop(training_set)
     NN= cost_func(NN, training_set, regularization)
-    print NN.avg_error
-    while NN.avg_error> error_tolerance:
+    error_change = 5
+    last_error = 0
+    while NN.avg_error> error_tolerance and error_change>=1e-6:
         #forward propagate with the entire training set
         print 'error= ', NN.avg_error
         NN=backprop(NN, learning_speed, regularization)
         NN = cost_func(NN, training_set, regularization)
+        error_change = np.abs(last_error - NN.avg_error)
+        last_error = NN.avg_error
     return NN
 ###############################################################################
 
@@ -232,12 +246,14 @@ def main():
     np.set_printoptions(threshold=1000, linewidth=1000, precision = 5, suppress = False)
 
     directory = '/home/gogqou/Documents/Classes/bmi203-final-project/'
-    inputs = np.random.randint(2, size = (4,2))
+    inputs = np.random.randint(2, size = (4,3))
     #initiate the neural network
     NN = Network(inputs,4,3,'sigmoid')
-    #NN.forwardprop(inputs)
-    #NN= backprop(NN, learning_speed=.15, regularization=.3)
-    NN= train_NN(NN, inputs, learning_speed = .15, error_tolerance = 1e-3)
+    NN.forwardprop(inputs)
+    NN= backprop(NN, learning_speed=.15, regularization=.3)
+    NN.forwardprop(inputs)
+    NN= backprop(NN, learning_speed=.15, regularization=.3)
+    #NN= train_NN(NN, inputs, learning_speed = .15, error_tolerance = 1e-2)
     '''
     test_output_file_name = 'test_output.txt'
     testseqs, test_sequenceList, test_dict = make_training_set(test_file, 0.5)

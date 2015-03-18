@@ -32,6 +32,8 @@ import numpy as np
 import sys
 import math
 from Bio import SeqIO
+from pylab import plot, show, ylim, yticks
+from matplotlib import *
 ###############################################################################
 #                                                                             #
 # class for a neural network                                                  #
@@ -59,16 +61,16 @@ class Network:
         #initialize the weights with random small numbers
         for i in range(self.n_hidden_nodes):
             for j in range(self.n_inputs):
-                self.weights_Hlayer[i,j] = np.random.uniform(-5, 5)
+                self.weights_Hlayer[i,j] = np.random.uniform(-.2, .2)
                 
         for k in range(self.n_outputs):
             for m in range(self.n_hidden_nodes):
-                self.weights_output[k,m] = np.random.uniform(-5, 5)
+                self.weights_output[k,m] = np.random.uniform(-.2, .2)
         for p in range(self.n_hidden_nodes):
-            self.bias_weights_Hlayer[p] = np.random.uniform(-5, 5)
+            self.bias_weights_Hlayer[p] = np.random.uniform(-.2, .2)
         
         for q in range(self.n_outputs):
-            self.bias_weights_output[q] = np.random.uniform(-5, 5)
+            self.bias_weights_output[q] = np.random.uniform(-.2, .2)
              
     def forwardprop(self, x):
         #method to calculate new output value
@@ -91,10 +93,11 @@ class Network:
         print 'weights'
         print weights_t
         print weights_t_out
-        print 'Hlayer'
-        print self.Hlayer
-        print self.Hlayer_activation
         '''
+        print 'Hlayer'
+        #print self.Hlayer
+        print self.Hlayer_activation
+        
         self.outputz = np.dot(weights_t_out, np.vstack((self.Hlayer_activation, self.bias_Hlayer)))
         #print 'output'
         #print self.outputz
@@ -130,23 +133,25 @@ def writetxt2(seqList, filename):
 #                                                                             #
 # backpropagation to calculate new weights                                    #
 def backprop(NN, learning_speed, regularization):
-    
+    '''
     print 'outputs'
     print NN.output
     print NN.input
+    '''
+    '''
     print 'diff'
     print NN.input-NN.output
     print '1-output'
     print (1-NN.output)
-    
-    NN.errors_output = (NN.input- NN.output)* NN.output*(1-NN.output)
+    '''
+    NN.errors_output = -(NN.input- NN.output)* NN.output*(1-NN.output)
     NN.errors_Hlayer = np.dot(np.transpose(NN.weights_output), NN.errors_output)* NN.Hlayer_activation*(1-NN.Hlayer_activation)
-    
+    '''
     print 'errors'
     print NN.errors_output
     print 'Hlayer'
     print NN.errors_Hlayer
-    
+    '''
     #initalizes delta matrices
     delta_weights_output = np.zeros([NN.n_outputs, NN.n_hidden_nodes])
     delta_weights_Hlayer = np.zeros([NN.n_hidden_nodes, NN.n_inputs])
@@ -156,7 +161,7 @@ def backprop(NN, learning_speed, regularization):
     # grad W = error for next layer * transpose of activation of this layer
     delta_weights_output=delta_weights_output+np.dot(NN.errors_output, np.transpose(NN.Hlayer_activation))
     delta_weights_Hlayer= delta_weights_Hlayer+np.dot(NN.errors_Hlayer, np.transpose(NN.input))
-    
+    '''
     print 'weights'
     print NN.weights_output
     print 'Hlayer'
@@ -166,7 +171,7 @@ def backprop(NN, learning_speed, regularization):
     print delta_weights_output
     print 'Hlayer'
     print delta_weights_Hlayer
-    
+    '''
     # for the biases, we have to multiply the error by the activation, which in this case is just 
     # a vector of 1s because bias is always 1
     delta_bias_weights_output = np.dot(NN.errors_output, np.transpose(NN.bias_Hlayer))
@@ -179,12 +184,12 @@ def backprop(NN, learning_speed, regularization):
     #we don't apply regularization to the bias weights
     NN.weights_Hlayer = NN.weights_Hlayer- learning_speed*(1/NN.inputshapey * delta_weights_Hlayer + regularization* NN.weights_Hlayer)
     NN.bias_weights_Hlayer = NN.bias_weights_Hlayer -learning_speed*(1/NN.inputshapey * delta_bias_weights_Hlayer)
-    
+    '''
     print 'new weights'
     print NN.weights_output
     print 'Hlayer'
     print NN.weights_Hlayer
-    
+    '''
     return NN
 ###############################################################################
 
@@ -194,7 +199,6 @@ def backprop(NN, learning_speed, regularization):
 # calc error for training                                                     #
 def cost_func(NN, training_set, regularization):
     print 'calculating cost_func'
-    [x,y] = training_set.shape
     NN.forwardprop(training_set)
     #error = 1/2(y-f(x))^2
     errors = .5*np.square(NN.output-NN.input)
@@ -213,18 +217,37 @@ def cost_func(NN, training_set, regularization):
 #  train neural network with training set                                     #
 def train_NN(NN, training_set, learning_speed, error_tolerance):
     
-    regularization = .1
+    regularization = .2
     NN.forwardprop(training_set)
     NN= cost_func(NN, training_set, regularization)
     error_change = 5
     last_error = 0
-    while NN.avg_error> error_tolerance and error_change>=1e-6:
+    print NN.weights_Hlayer.shape
+    weights_Hlayer = np.reshape(NN.weights_Hlayer, [24, 1])
+    weights_output = np.reshape(NN.weights_output, [24, 1])
+    #print NN.Hlayer_activation
+    i=0
+    while NN.avg_error> error_tolerance and error_change>=1e-9:
         #forward propagate with the entire training set
         print 'error= ', NN.avg_error
+        
         NN=backprop(NN, learning_speed, regularization)
         NN = cost_func(NN, training_set, regularization)
+        weights_Hlayer = np.hstack((weights_Hlayer, np.reshape(NN.weights_Hlayer, [24, 1])))
+        weights_output = np.hstack((weights_output, np.reshape(NN.weights_output, [24, 1])))
         error_change = np.abs(last_error - NN.avg_error)
         last_error = NN.avg_error
+        i=i+1
+    indices = np.linspace(0,i+1, i+1)
+    
+    print len(indices)
+    print weights_Hlayer.shape
+    for j in range(24):
+        plot(indices, weights_Hlayer[j,:], 'v') 
+        plot(indices, weights_output[j,:], 'o') 
+        #ylim([0,1])
+    show()
+    
     return NN
 ###############################################################################
 
@@ -246,17 +269,20 @@ def main():
     np.set_printoptions(threshold=1000, linewidth=1000, precision = 5, suppress = False)
 
     directory = '/home/gogqou/Documents/Classes/bmi203-final-project/'
-    inputs = np.random.randint(2, size = (8,4)).astype(float)
+    #inputs = np.random.randint(2, size = (8,4)).astype(float)
+    inputs = np.zeros([8,8])
+    for i in range(8):
+        inputs[i,i] = 1.0
     #initiate the neural network
     
     NN = Network(inputs,8,3,'sigmoid')
-    
+    '''
     NN.forwardprop(inputs)
     NN= backprop(NN, learning_speed=.15, regularization=.3)
     NN.forwardprop(inputs)
     NN= backprop(NN, learning_speed=.15, regularization=.3)
-    
-    #NN= train_NN(NN, inputs, learning_speed = .15, error_tolerance = 1e-5)
+    '''
+    NN= train_NN(NN, inputs, learning_speed = .4, error_tolerance = 1e-6)
     '''
     test_output_file_name = 'test_output.txt'
     testseqs, test_sequenceList, test_dict = make_training_set(test_file, 0.5)

@@ -61,16 +61,16 @@ class Network:
         #initialize the weights with random small numbers
         for i in range(self.n_hidden_nodes):
             for j in range(self.n_inputs):
-                self.weights_Hlayer[i,j] = np.random.uniform(-.2, .2)
+                self.weights_Hlayer[i,j] = np.random.uniform(-.5, .5)
                 
         for k in range(self.n_outputs):
             for m in range(self.n_hidden_nodes):
-                self.weights_output[k,m] = np.random.uniform(-.2, .2)
+                self.weights_output[k,m] = np.random.uniform(-.5, .5)
         for p in range(self.n_hidden_nodes):
-            self.bias_weights_Hlayer[p] = np.random.uniform(-.2, .2)
+            self.bias_weights_Hlayer[p] = np.random.uniform(-.5, .5)
         
         for q in range(self.n_outputs):
-            self.bias_weights_output[q] = np.random.uniform(-.2, .2)
+            self.bias_weights_output[q] = np.random.uniform(-.5, .5)
              
     def forwardprop(self, x):
         #method to calculate new output value
@@ -100,8 +100,9 @@ class Network:
         
         self.outputz = np.dot(weights_t_out, np.vstack((self.Hlayer_activation, self.bias_Hlayer)))
         #print 'output'
-        #print self.outputz
         self.output = sigmoid(self.outputz)
+        
+        print self.output
         print 'done forward prop'
               
         
@@ -225,9 +226,10 @@ def train_NN(NN, training_set, learning_speed, error_tolerance):
     print NN.weights_Hlayer.shape
     weights_Hlayer = np.reshape(NN.weights_Hlayer, [24, 1])
     weights_output = np.reshape(NN.weights_output, [24, 1])
+    bias_Hlayer =NN.bias_weights_Hlayer
     #print NN.Hlayer_activation
     i=0
-    while NN.avg_error> error_tolerance and error_change>=1e-9:
+    while NN.avg_error> error_tolerance and error_change>=1e-6:
         #forward propagate with the entire training set
         print 'error= ', NN.avg_error
         
@@ -235,17 +237,20 @@ def train_NN(NN, training_set, learning_speed, error_tolerance):
         NN = cost_func(NN, training_set, regularization)
         weights_Hlayer = np.hstack((weights_Hlayer, np.reshape(NN.weights_Hlayer, [24, 1])))
         weights_output = np.hstack((weights_output, np.reshape(NN.weights_output, [24, 1])))
+        bias_Hlayer = np.hstack((bias_Hlayer, NN.bias_weights_Hlayer))
         error_change = np.abs(last_error - NN.avg_error)
         last_error = NN.avg_error
         i=i+1
     indices = np.linspace(0,i+1, i+1)
-    
     print len(indices)
-    print weights_Hlayer.shape
+    print weights_output.shape
+    print bias_Hlayer.shape
     for j in range(24):
-        plot(indices, weights_Hlayer[j,:], 'v') 
+        #plot(indices, weights_Hlayer[j,:], 'v') 
         plot(indices, weights_output[j,:], 'o') 
-        #ylim([0,1])
+    for k in range(3):
+        plot(indices, bias_Hlayer[k,:], '^') 
+        #ylim([-1,1])
     show()
     
     return NN
@@ -269,10 +274,12 @@ def main():
     np.set_printoptions(threshold=1000, linewidth=1000, precision = 5, suppress = False)
 
     directory = '/home/gogqou/Documents/Classes/bmi203-final-project/'
-    #inputs = np.random.randint(2, size = (8,4)).astype(float)
+    #inputs = np.random.randint(2, size = (8,1)).astype(float)
+    
     inputs = np.zeros([8,8])
     for i in range(8):
         inputs[i,i] = 1.0
+        
     #initiate the neural network
     
     NN = Network(inputs,8,3,'sigmoid')

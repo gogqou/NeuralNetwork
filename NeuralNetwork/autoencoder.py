@@ -96,7 +96,7 @@ class Network:
         self.output = sigmoid(self.outputz)
         
         #print self.output
-        print 'done forward prop'
+        #print 'done forward prop'
               
         
 ###############################################################################
@@ -127,7 +127,6 @@ def writetxt2(seqList, filename):
 #                                                                             #
 # backpropagation to calculate new weights                                    #
 def backprop(NN, learning_speed, regularization):
-
     NN.errors_output = -(NN.input- NN.output)* NN.output*(1-NN.output)
     NN.errors_Hlayer = np.dot(np.transpose(NN.weights_output), NN.errors_output)* NN.Hlayer_activation*(1-NN.Hlayer_activation)
     
@@ -165,7 +164,7 @@ def backprop(NN, learning_speed, regularization):
 #                                                                             #
 # calc error for training                                                     #
 def cost_func(NN, training_set, regularization):
-    print 'calculating cost_func'
+    #print 'calculating cost_func'
     NN.forwardprop(training_set)
     #error = 1/2(y-f(x))^2
     errors = .5*np.square(NN.output-NN.input)
@@ -182,9 +181,7 @@ def cost_func(NN, training_set, regularization):
 ###############################################################################
 #                                                                             #
 #  train neural network with training set                                     #
-def train_NN(NN, training_set, learning_speed, error_tolerance):
-    
-    regularization = .008
+def train_NN(NN, training_set, learning_speed, error_tolerance, regularization = .008):
     NN.forwardprop(training_set)
     NN= cost_func(NN, training_set, regularization)
     error_change = 5
@@ -195,7 +192,7 @@ def train_NN(NN, training_set, learning_speed, error_tolerance):
     bias_Hlayer =NN.bias_weights_Hlayer
     #print NN.Hlayer_activation
     i=0
-    while NN.avg_error> error_tolerance and error_change>=1e-7:
+    while NN.avg_error> error_tolerance and error_change>=1e-5:
         print 'ITERATION = =============================================== ', i
         #forward propagate with the entire training set
         print 'error= ', NN.avg_error
@@ -237,7 +234,7 @@ def main():
     np.set_printoptions(threshold=1000, linewidth=1000, precision = 5, suppress = False)
 
     directory = '/home/gogqou/Documents/Classes/bmi203-final-project/'
-    inputs = np.random.randint(2, size = (8,100)).astype(float)
+    inputs = np.random.randint(2, size = (8,500)).astype(float)
     
     '''
     inputs = np.zeros([8,8])
@@ -247,19 +244,26 @@ def main():
     #initiate the neural network
     
     NN = Network(inputs,8,3,'sigmoid')
-    '''
-    NN.forwardprop(inputs)
-    NN= backprop(NN, learning_speed=.15, regularization=.3)
-    NN.forwardprop(inputs)
-    NN= backprop(NN, learning_speed=.15, regularization=.3)
-    NN.forwardprop(inputs)
-    NN= backprop(NN, learning_speed=.15, regularization=.3)
-    NN.forwardprop(inputs)
-    NN= backprop(NN, learning_speed=.15, regularization=.3)
-    '''
-    NN= train_NN(NN, inputs, learning_speed = .6, error_tolerance = 1e-8)
+    currentcost = 1000
+    best_reg = 0.001
+    learning_speed = .05
+    error_tolerance = 1e-8
+    regularization = np.linspace(0.0, .2, 1000)
+    for j in range(len(regularization)):
+        for i in range(1,30):
+            NN.forwardprop(inputs)
+            NN= backprop(NN, learning_speed, regularization[j])
+        NN = cost_func(NN, inputs, regularization[j])
+        print NN.avg_error
+        if NN.avg_error < currentcost:
+            currentcost = NN.avg_error
+            best_reg = regularization[j]
+            
+    NN = Network(inputs,8,3,'sigmoid')        
+    NN= train_NN(NN, inputs, learning_speed, error_tolerance, best_reg)
     print inputs
     print NN.output
+    print best_reg
     '''
     test_output_file_name = 'test_output.txt'
     testseqs, test_sequenceList, test_dict = make_training_set(test_file, 0.5)

@@ -228,10 +228,10 @@ def backprop(NN, learning_speed, regularization):
     # update weights
     # weights = weights - learning rate * ( average change in weights + regularization * current weights)
     NN.weights_output =NN.weights_output-learning_speed*( 1.0/NN.inputshapey * delta_weights_output + regularization* NN.weights_output)
-    NN.bias_weights_output = NN.bias_weights_output-learning_speed*(1/NN.inputshapey * delta_bias_weights_output)
+    NN.bias_weights_output = NN.bias_weights_output-learning_speed*(1.0/NN.inputshapey * delta_bias_weights_output)
     #we don't apply regularization to the bias weights
     NN.weights_Hlayer = NN.weights_Hlayer- learning_speed*(1.0/NN.inputshapey * delta_weights_Hlayer + regularization* NN.weights_Hlayer)
-    NN.bias_weights_Hlayer = NN.bias_weights_Hlayer -learning_speed*(1/NN.inputshapey * delta_bias_weights_Hlayer)
+    NN.bias_weights_Hlayer = NN.bias_weights_Hlayer -learning_speed*(1.0/NN.inputshapey * delta_bias_weights_Hlayer)
 
 
     return NN
@@ -251,9 +251,12 @@ def cost_func(NN, training_set, sequenceList, regularization):
     NN.labels = labels
     #error = 1/2(y-f(x))^2
     NN.errors = .5*np.square(np.transpose(NN.output)-labels)
+    
     sum_weights_Hlayer = np.sum(np.square(NN.weights_Hlayer))
     sum_weights_output = np.sum(np.square(NN.weights_output))
+    
     training_set_sample_num = len(NN.errors)
+    print training_set_sample_num
     NN.avg_error = 1.0/training_set_sample_num * np.sum(NN.errors) + regularization/2.0*(sum_weights_Hlayer + sum_weights_output)
     #NN.avg_error = 1.0/training_set_sample_num * np.sum(errors)
     return NN
@@ -263,13 +266,15 @@ def cost_func(NN, training_set, sequenceList, regularization):
 ###############################################################################
 #                                                                             #
 #  train neural network with training set                                     #
-def train_NN(NN, training_set, sequenceList, learning_speed, error_tolerance):
+def train_NN(NN, training_set, sequenceList, test_set, test_sequenceList, learning_speed, error_tolerance):
     
     regularization = .02
     NN.forwardprop(training_set)
     NN= cost_func(NN, training_set, sequenceList, regularization)
     error_change = 5
     last_error = 0
+    test_error = 5
+    last_test_error = 0
     
     weights_Hlayer = np.reshape(NN.weights_Hlayer, [680, 1])
     weights_output = np.reshape(NN.weights_output, [10, 1])
@@ -292,6 +297,11 @@ def train_NN(NN, training_set, sequenceList, learning_speed, error_tolerance):
         
         error_change = last_error - NN.avg_error
         last_error = NN.avg_error
+        
+        NN2 = cost_func(NN, training_set, sequenceList, regularization)
+        test_error = np.abs(last_test_error - NN2.avg_error) 
+        last_test_error = NN2.avg_error
+        
         i = i+1
     indices = np.linspace(0,i+1, i+1)
     plt.figure(1)
@@ -347,11 +357,13 @@ def main():
     full_sequenceList = pos_sequenceList + neg_sequenceList
     #initiate the neural network
     NN = Network(posseqs,1,10,'sigmoid')
-    NN.forwardprop(full_training_set)
-    NN= train_NN(NN, full_training_set, full_sequenceList, learning_speed = .7, error_tolerance = 1e-6)
     
     test_output_file_name = 'test_output.txt'
     testseqs, test_sequenceList, test_dict = make_training_set(test_file, 0.5)
+    
+    NN= train_NN(NN, full_training_set, full_sequenceList, testseqs, test_sequenceList, learning_speed = .1, error_tolerance = 1e-6)
+    
+    
     test_NN(NN, testseqs, test_sequenceList, directory + test_output_file_name)
     
     return 1

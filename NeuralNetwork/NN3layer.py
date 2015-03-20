@@ -23,6 +23,9 @@ import numpy as np
 import sys
 import math
 from Bio import SeqIO
+from pylab import plot, show, ylim, yticks
+import matplotlib.pyplot as plt
+from matplotlib import *
 ###############################################################################
 #                                                                             #
 # class for a neural network                                                  #
@@ -55,13 +58,13 @@ class Network:
         for k in range(self.n_outputs):
             for m in range(self.n_hidden_nodes):
                 self.weights_output[k,m] = np.random.random()
-        '''        
+             
         for p in range(self.n_hidden_nodes):
             self.bias_weights_Hlayer[p] = np.random.random()
         
         for q in range(self.n_outputs):
             self.bias_weights_output[q] = np.random.random()
-        '''
+        
              
     def forwardprop(self, x):
         #method to calculate new output value
@@ -225,10 +228,10 @@ def backprop(NN, learning_speed, regularization):
     # update weights
     # weights = weights - learning rate * ( average change in weights + regularization * current weights)
     NN.weights_output =NN.weights_output-learning_speed*( 1.0/NN.inputshapey * delta_weights_output + regularization* NN.weights_output)
-    #NN.bias_weights_output = NN.bias_weights_output-learning_speed*(1/NN.inputshapey * delta_bias_weights_output)
+    NN.bias_weights_output = NN.bias_weights_output-learning_speed*(1/NN.inputshapey * delta_bias_weights_output)
     #we don't apply regularization to the bias weights
     NN.weights_Hlayer = NN.weights_Hlayer- learning_speed*(1.0/NN.inputshapey * delta_weights_Hlayer + regularization* NN.weights_Hlayer)
-    #NN.bias_weights_Hlayer = NN.bias_weights_Hlayer -learning_speed*(1/NN.inputshapey * delta_bias_weights_Hlayer)
+    NN.bias_weights_Hlayer = NN.bias_weights_Hlayer -learning_speed*(1/NN.inputshapey * delta_bias_weights_Hlayer)
 
 
     return NN
@@ -247,11 +250,11 @@ def cost_func(NN, training_set, sequenceList, regularization):
     NN.forwardprop(training_set)
     NN.labels = labels
     #error = 1/2(y-f(x))^2
-    errors = .5*np.square(np.transpose(NN.output)-labels)
+    NN.errors = .5*np.square(np.transpose(NN.output)-labels)
     sum_weights_Hlayer = np.sum(np.square(NN.weights_Hlayer))
     sum_weights_output = np.sum(np.square(NN.weights_output))
-    training_set_sample_num = len(errors)
-    NN.avg_error = 1.0/training_set_sample_num * np.sum(errors) + regularization/2.0*(sum_weights_Hlayer + sum_weights_output)
+    training_set_sample_num = len(NN.errors)
+    NN.avg_error = 1.0/training_set_sample_num * np.sum(NN.errors) + regularization/2.0*(sum_weights_Hlayer + sum_weights_output)
     #NN.avg_error = 1.0/training_set_sample_num * np.sum(errors)
     return NN
 ###############################################################################
@@ -262,18 +265,48 @@ def cost_func(NN, training_set, sequenceList, regularization):
 #  train neural network with training set                                     #
 def train_NN(NN, training_set, sequenceList, learning_speed, error_tolerance):
     
-    regularization = .11
+    regularization = .02
     NN.forwardprop(training_set)
     NN= cost_func(NN, training_set, sequenceList, regularization)
     error_change = 5
     last_error = 0
+    
+    weights_Hlayer = np.reshape(NN.weights_Hlayer, [680, 1])
+    weights_output = np.reshape(NN.weights_output, [10, 1])
+    errors_output = np.transpose(np.array([NN.errors[:,0]]))
+    bias_Hlayer =NN.bias_weights_Hlayer
+    i = 0
+    
     while NN.avg_error> error_tolerance and error_change>=1e-6:
         #forward propagate with the entire training set
         print 'error= ', NN.avg_error
         NN=backprop(NN, learning_speed, regularization)
         NN = cost_func(NN, training_set, sequenceList, regularization)
-        error_change = np.abs(last_error - NN.avg_error)
+        
+        
+        weights_Hlayer = np.hstack((weights_Hlayer, np.reshape(NN.weights_Hlayer, [680, 1])))
+        weights_output = np.hstack((weights_output, np.reshape(NN.weights_output, [10, 1])))
+        errors_output= np.hstack((errors_output,np.transpose(np.array([NN.errors[:,0]]))))
+        bias_Hlayer = np.hstack((bias_Hlayer, NN.bias_weights_Hlayer))
+        
+        
+        error_change = last_error - NN.avg_error
         last_error = NN.avg_error
+        i = i+1
+    indices = np.linspace(0,i+1, i+1)
+    plt.figure(1)
+    plt.subplot(211)
+    for m in range(1):
+        plot(indices, errors_output[m,:], 'b')
+    plt.subplot(212)
+    for j in range(680):
+        plot(indices, weights_Hlayer[j,:], 'k') 
+        
+    for k in range(10):
+        plot(indices, weights_output[k,:], 'o') 
+        #plot(indices, bias_Hlayer[k,:], '^') 
+        #ylim([-1,1])
+    show()
     return NN
 ###############################################################################
 
@@ -315,7 +348,7 @@ def main():
     #initiate the neural network
     NN = Network(posseqs,1,10,'sigmoid')
     NN.forwardprop(full_training_set)
-    NN= train_NN(NN, full_training_set, full_sequenceList, learning_speed = .01, error_tolerance = 1e-3)
+    NN= train_NN(NN, full_training_set, full_sequenceList, learning_speed = .7, error_tolerance = 1e-6)
     
     test_output_file_name = 'test_output.txt'
     testseqs, test_sequenceList, test_dict = make_training_set(test_file, 0.5)

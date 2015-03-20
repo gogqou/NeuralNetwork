@@ -33,6 +33,7 @@ import sys
 import math
 from Bio import SeqIO
 from pylab import plot, show, ylim, yticks
+import matplotlib.pyplot as plt
 from matplotlib import *
 ###############################################################################
 #                                                                             #
@@ -167,12 +168,12 @@ def cost_func(NN, training_set, regularization):
     #print 'calculating cost_func'
     NN.forwardprop(training_set)
     #error = 1/2(y-f(x))^2
-    errors = .5*np.square(NN.output-NN.input)
-
+    NN.errors = .5*np.square(NN.output-NN.input)
+    
     sum_weights_Hlayer = np.sum(np.square(NN.weights_Hlayer))
     sum_weights_output = np.sum(np.square(NN.weights_output))
-    training_set_sample_num = len(errors)
-    NN.avg_error = 1.0/training_set_sample_num * np.sum(errors) + regularization/2.0*(sum_weights_Hlayer + sum_weights_output)
+    training_set_sample_num = len(NN.errors)
+    NN.avg_error = 1.0/training_set_sample_num * np.sum(NN.errors) + regularization/2.0*(sum_weights_Hlayer + sum_weights_output)
     #NN.avg_error = 1.0/training_set_sample_num * np.sum(errors) 
     return NN
 ###############################################################################
@@ -181,33 +182,49 @@ def cost_func(NN, training_set, regularization):
 ###############################################################################
 #                                                                             #
 #  train neural network with training set                                     #
-def train_NN(NN, training_set, learning_speed, error_tolerance, regularization = .008):
+def train_NN(NN, training_set, test_set, learning_speed, error_tolerance, regularization = .008):
     NN.forwardprop(training_set)
     NN= cost_func(NN, training_set, regularization)
     error_change = 5
     last_error = 0
+    test_error = 5
+    last_test_error = 0
     
     weights_Hlayer = np.reshape(NN.weights_Hlayer, [24, 1])
     weights_output = np.reshape(NN.weights_output, [24, 1])
+    errors_output = np.transpose(np.array([NN.errors[:,0]]))
     bias_Hlayer =NN.bias_weights_Hlayer
     #print NN.Hlayer_activation
     i=0
-    while NN.avg_error> error_tolerance and error_change>=1e-5:
+    while NN.avg_error> error_tolerance and test_error>=1e-6 and i <=50000:
         print 'ITERATION = =============================================== ', i
         #forward propagate with the entire training set
         print 'error= ', NN.avg_error
         NN=backprop(NN, learning_speed, regularization)
         NN = cost_func(NN, training_set, regularization)
+        
+        
         weights_Hlayer = np.hstack((weights_Hlayer, np.reshape(NN.weights_Hlayer, [24, 1])))
         weights_output = np.hstack((weights_output, np.reshape(NN.weights_output, [24, 1])))
+        errors_output= np.hstack((errors_output,np.transpose(np.array([NN.errors[:,0]]))))
         bias_Hlayer = np.hstack((bias_Hlayer, NN.bias_weights_Hlayer))
+        
         error_change = np.abs(last_error - NN.avg_error)
         last_error = NN.avg_error
+        
+        NN2=cost_func(NN, test_set, regularization)
+        test_error = np.abs(last_test_error - NN2.avg_error) 
+        last_test_error = NN2.avg_error
         i=i+1
     indices = np.linspace(0,i+1, i+1)
+    plt.figure(1)
+    plt.subplot(211)
+    for m in range(8):
+        plot(indices, errors_output[m,:], 'b')
+    plt.subplot(212)
     for j in range(24):
-        plot(indices, weights_Hlayer[j,:], 'v') 
-        plot(indices, weights_output[j,:], 'o') 
+        plot(indices, weights_Hlayer[j,:], 'k') 
+        #plot(indices, weights_output[j,:], 'o') 
     #for k in range(3):
         #plot(indices, bias_Hlayer[k,:], '^') 
         #ylim([-1,1])
@@ -234,8 +251,8 @@ def main():
     np.set_printoptions(threshold=1000, linewidth=1000, precision = 5, suppress = False)
 
     directory = '/home/gogqou/Documents/Classes/bmi203-final-project/'
-    inputs = np.random.randint(2, size = (8,500)).astype(float)
-    
+    inputs = np.random.randint(2, size = (8,300)).astype(float)
+    test_set = np.random.randint(2, size = (8,400)).astype(float)
     '''
     inputs = np.zeros([8,8])
     for i in range(8):
@@ -244,23 +261,48 @@ def main():
     #initiate the neural network
     
     NN = Network(inputs,8,3,'sigmoid')
-    currentcost = 1000
-    best_reg = 0.001
-    learning_speed = .05
-    error_tolerance = 1e-8
-    regularization = np.linspace(0.0, .2, 1000)
+    currentcost = 100
+    best_reg = .0023
+    learning_speed = .90
+    error_tolerance = 1e-3
+    regularization = np.linspace(0.0, .99, 1000)
+    '''
     for j in range(len(regularization)):
-        for i in range(1,30):
+        NN = Network(inputs,8,3,'sigmoid')
+        for i in range(1,25):
+            
             NN.forwardprop(inputs)
             NN= backprop(NN, learning_speed, regularization[j])
         NN = cost_func(NN, inputs, regularization[j])
-        print NN.avg_error
+        #print NN.avg_error
         if NN.avg_error < currentcost:
             currentcost = NN.avg_error
             best_reg = regularization[j]
-            
+    regularization = np.linspace(0.0, best_reg+best_reg*1.5, 500)
+    for j in range(len(regularization)):
+        NN = Network(inputs,8,3,'sigmoid')
+        for i in range(1,25):
+            NN.forwardprop(inputs)
+            NN= backprop(NN, learning_speed, regularization[j])
+        NN = cost_func(NN, inputs, regularization[j])
+        #print NN.avg_error
+        if NN.avg_error < currentcost:
+            currentcost = NN.avg_error
+            best_reg = regularization[j]
+    regularization = np.linspace(0.0, best_reg+best_reg*1.5, 300)
+    for j in range(len(regularization)):
+        NN = Network(inputs,8,3,'sigmoid')
+        for i in range(1,25):
+            NN.forwardprop(inputs)
+            NN= backprop(NN, learning_speed, regularization[j])
+        NN = cost_func(NN, inputs, regularization[j])
+        #print NN.avg_error
+        if NN.avg_error < currentcost:
+            currentcost = NN.avg_error
+            best_reg = regularization[j]
+    '''
     NN = Network(inputs,8,3,'sigmoid')        
-    NN= train_NN(NN, inputs, learning_speed, error_tolerance, best_reg)
+    NN= train_NN(NN, inputs, test_set, learning_speed, error_tolerance, best_reg)
     print inputs
     print NN.output
     print best_reg

@@ -53,17 +53,17 @@ class Network:
         #initialize the weights with random small numbers
         for i in range(self.n_hidden_nodes):
             for j in range(self.n_inputs):
-                self.weights_Hlayer[i,j] = np.random.random()
+                self.weights_Hlayer[i,j] = np.random.uniform(-1, 1)
                 
         for k in range(self.n_outputs):
             for m in range(self.n_hidden_nodes):
-                self.weights_output[k,m] = np.random.random()
+                self.weights_output[k,m] = np.random.uniform(-1, 1)
              
         for p in range(self.n_hidden_nodes):
-            self.bias_weights_Hlayer[p] = np.random.random()
+            self.bias_weights_Hlayer[p] = np.random.uniform(-1, 1)
         
         for q in range(self.n_outputs):
-            self.bias_weights_output[q] = np.random.random()
+            self.bias_weights_output[q] = np.random.uniform(-1, 1)
         
              
     def forwardprop(self, x):
@@ -83,19 +83,12 @@ class Network:
         #forward propagate using the weights and the values in each layer
         self.Hlayer = np.dot(weights_t, self.inputwithbias)
         self.Hlayer_activation = sigmoid(self.Hlayer)
-        '''
-        print 'weights'
-        print weights_t
-        print weights_t_out
-        print 'Hlayer'
-        print self.Hlayer
-        print self.Hlayer_activation
-        '''
+        
         self.outputz = np.dot(weights_t_out, np.vstack((sigmoid(self.Hlayer), self.bias_Hlayer)))
         #print 'output'
         #print self.outputz
         self.output = sigmoid(self.outputz)
-        print 'done forward prop'
+        #print 'done forward prop'
               
         
 ###############################################################################
@@ -242,13 +235,16 @@ def backprop(NN, learning_speed, regularization):
 #                                                                             #
 # calc error for training                                                     #
 def cost_func(NN, training_set, sequenceList, regularization):
-    print 'calculating cost_func'
+    #print 'calculating cost_func'
     [x,y] = training_set.shape
     labels = np.zeros([y,1])
+    
     for i in range(y):
         labels[i]=sequenceList[i].label
+        
     NN.forwardprop(training_set)
     NN.labels = labels
+    
     #error = 1/2(y-f(x))^2
     NN.errors = .5*np.square(np.transpose(NN.output)-labels)
     
@@ -256,7 +252,7 @@ def cost_func(NN, training_set, sequenceList, regularization):
     sum_weights_output = np.sum(np.square(NN.weights_output))
     
     training_set_sample_num = len(NN.errors)
-    print training_set_sample_num
+    
     NN.avg_error = 1.0/training_set_sample_num * np.sum(NN.errors) + regularization/2.0*(sum_weights_Hlayer + sum_weights_output)
     #NN.avg_error = 1.0/training_set_sample_num * np.sum(errors)
     return NN
@@ -266,9 +262,8 @@ def cost_func(NN, training_set, sequenceList, regularization):
 ###############################################################################
 #                                                                             #
 #  train neural network with training set                                     #
-def train_NN(NN, training_set, sequenceList, test_set, test_sequenceList, learning_speed, error_tolerance):
+def train_NN(NN, training_set, sequenceList, test_set, test_sequenceList, regularization, learning_speed, error_tolerance):
     
-    regularization = .02
     NN.forwardprop(training_set)
     NN= cost_func(NN, training_set, sequenceList, regularization)
     error_change = 5
@@ -282,7 +277,8 @@ def train_NN(NN, training_set, sequenceList, test_set, test_sequenceList, learni
     bias_Hlayer =NN.bias_weights_Hlayer
     i = 0
     
-    while NN.avg_error> error_tolerance and error_change>=1e-6:
+    while NN.avg_error> error_tolerance and test_error>=1e-9:
+        print 'ITERATION = =============================================== ', i
         #forward propagate with the entire training set
         print 'error= ', NN.avg_error
         NN=backprop(NN, learning_speed, regularization)
@@ -301,8 +297,12 @@ def train_NN(NN, training_set, sequenceList, test_set, test_sequenceList, learni
         NN2 = cost_func(NN, training_set, sequenceList, regularization)
         test_error = np.abs(last_test_error - NN2.avg_error) 
         last_test_error = NN2.avg_error
-        
+        error_temp = last_test_error - NN2.avg_error
         i = i+1
+        if i>100 and error_change <=0:
+            print 'error going wrong way, stopped early'
+            break
+        
     indices = np.linspace(0,i+1, i+1)
     plt.figure(1)
     plt.subplot(211)
@@ -313,7 +313,7 @@ def train_NN(NN, training_set, sequenceList, test_set, test_sequenceList, learni
         plot(indices, weights_Hlayer[j,:], 'k') 
         
     for k in range(10):
-        plot(indices, weights_output[k,:], 'o') 
+        plot(indices, weights_output[k,:], 'y') 
         #plot(indices, bias_Hlayer[k,:], '^') 
         #ylim([-1,1])
     show()
@@ -358,12 +358,65 @@ def main():
     #initiate the neural network
     NN = Network(posseqs,1,10,'sigmoid')
     
+    currentcost = 100
+    best_reg = .23
+    learning_speed = .1
+    error_tolerance = 1e-5
+    
+    '''
+    regularization = np.linspace(0.0, .99, 100)
+    for j in range(len(regularization)):
+        NN = Network(full_training_set,1,10,'sigmoid')
+        NN = cost_func(NN, full_training_set, full_sequenceList, best_reg)
+        current= NN.avg_error 
+        i = 0
+        delta_error = 1
+        while delta_error >0 and i <25:
+            i=i+1
+            NN.forwardprop(full_training_set)
+            NN= backprop(NN, learning_speed, regularization[j])
+            NN = cost_func(NN, full_training_set, full_sequenceList, best_reg)
+            delta_error = current- NN.avg_error
+            if delta_error <0:
+                break
+            current = NN.avg_error
+        NN = cost_func(NN, full_training_set, full_sequenceList, regularization[j])
+        #print NN.avg_error
+        if NN.avg_error < currentcost:
+            currentcost = NN.avg_error
+            best_reg = regularization[j]
+    regularization = np.linspace(0.0, best_reg+best_reg*.01, 500)
+    for j in range(len(regularization)):
+        NN = Network(full_training_set,1,10,'sigmoid')
+        NN = cost_func(NN, full_training_set, full_sequenceList, best_reg)
+        for i in range(1,25):
+            NN.forwardprop(full_training_set)
+            NN= backprop(NN, learning_speed, regularization[j])
+        NN = cost_func(NN, full_training_set, full_sequenceList, regularization[j])
+        #print NN.avg_error
+        if NN.avg_error < currentcost:
+            currentcost = NN.avg_error
+            best_reg = regularization[j]
+    regularization = np.linspace(0.0, best_reg+best_reg*.01, 300)
+    for j in range(len(regularization)):
+        NN = Network(full_training_set,1,10,'sigmoid')
+        NN = cost_func(NN, full_training_set, full_sequenceList, best_reg)
+        for i in range(1,25):
+            NN.forwardprop(full_training_set)
+            NN= backprop(NN, learning_speed, regularization[j])
+        NN = cost_func(NN, full_training_set, full_sequenceList, regularization[j])
+        #print NN.avg_error
+        if NN.avg_error < currentcost:
+            currentcost = NN.avg_error
+            best_reg = regularization[j]
+    
+    '''
     test_output_file_name = 'test_output.txt'
     testseqs, test_sequenceList, test_dict = make_training_set(test_file, 0.5)
     
-    NN= train_NN(NN, full_training_set, full_sequenceList, testseqs, test_sequenceList, learning_speed = .1, error_tolerance = 1e-6)
+    NN= train_NN(NN, full_training_set, full_sequenceList, testseqs, test_sequenceList, best_reg, learning_speed = .1, error_tolerance = 1e-6)
     
-    
+    print best_reg
     test_NN(NN, testseqs, test_sequenceList, directory + test_output_file_name)
     
     return 1

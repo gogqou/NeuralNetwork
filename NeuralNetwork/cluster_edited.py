@@ -72,7 +72,14 @@ def read_sequences(file):
         sequenceList.append(seq)
 
     return sequenceList
-
+def read_seq_list(sequences):
+      
+    sequenceList = []
+    for i in range(len(sequences)):
+        seq = Sequence(sequences[i][0])
+        seq.nmers(3)
+        sequenceList.append(seq)
+    return sequenceList
 ###############################################################################
 def readtxt(filename):
     lines = [line.strip() for line in open(filename)]
@@ -107,11 +114,11 @@ def cluster_by_partitioning(sequences):
     
     # randomly pick k centers
     #iterate through k and keep the lowest objective function clusters
-    best_obj_func = 100000000
+    best_obj_func = 1e20
     #go through different values for number of clusters to find the one that gives the lowest obj function
-    for k in range(20,len(sequences)/5, 150):
+    for k in range(1,len(sequences)/3, 3):
         #do a few tries at randomly generating centers
-        for repeat in range(1):
+        for repeat in range(2):
             centers_indices = random.sample(xrange(0, len(sequences)), k)
             centers = []
             for i in range(len(centers_indices)):
@@ -120,7 +127,7 @@ def cluster_by_partitioning(sequences):
             #do k-means_clusters--this function takes the centers and clusters, calculates new clusters
             # k_means_centers takes new clusterings and calculates new centers
             current_clusters= k_means_clusters(sequences, sequences, centers)
-            previous_epsilon = obj_function( current_clusters, centers)
+            previous_epsilon = obj_function(current_clusters, centers)
             L = 0
             delta = previous_epsilon
             while delta>10 and L<600:
@@ -140,7 +147,7 @@ def cluster_by_partitioning(sequences):
             print current_obj_func, k
     #print best_k
     #print best_obj_func
-    return best_clusters, centers
+    return best_clusters, best_centers
 #                                                                             #
 #                                                                             #
 ###############################################################################
@@ -150,7 +157,7 @@ def cluster_by_partitioning(sequences):
 #                                                                             #
 def obj_function(clusters, centers):
     
-    distance_matrix = np.zeros([len(centers),2000])
+    distance_matrix = np.zeros([len(centers),40])
     max_length = 0
     for i in range(len(centers)):
         for j in range(len(clusters[i])):
@@ -224,12 +231,10 @@ def write_clustering(filename, clusters):
 #                                                                             #
 #                                                                             #
 #                                                                             #
-def negative_centers():
+def negative_centers(inputsequences, directory):
     np.set_printoptions(threshold=1000, linewidth=1000, precision = 5, suppress = False)
-    directory = "/home/gogqou/Documents/Classes/bmi203-final-project/"
-    file = 'sample_nseqs.txt'
     targetfile = directory+'clustered_negatives.txt'
-    sequenceList = read_sequences(directory+file)
+    sequenceList = read_seq_list(inputsequences)
     clustering, centers = cluster_by_partitioning(sequenceList)
     write_clustering(targetfile, clustering)
     print centers

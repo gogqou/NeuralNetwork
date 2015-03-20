@@ -26,6 +26,7 @@ from Bio import SeqIO
 from pylab import plot, show, ylim, yticks
 import matplotlib.pyplot as plt
 from matplotlib import *
+import cluster_edited as cluster
 ###############################################################################
 #                                                                             #
 # class for a neural network                                                  #
@@ -160,6 +161,13 @@ def writetxt2(seqList, filename):
     out.close()
     print 'done writing'
     return 1
+def writetxt3(seqList, filename):
+    out = open(filename, 'w')
+    for i in range(len(seqList)):
+        out.write(seqList[i].seq+'\n')
+    out.close()
+    print 'done writing'
+    return 1
 ###############################################################################
 #                                                                             #
 # generate negative sequences from fa file of yeast UTRs                      #
@@ -172,9 +180,10 @@ def gen_nmers_from_fa(file, n, directory, pos_dict):
         nmers_list = nmers(seq, n, uniq_dict, pos_dict)
         nmer_seqs = np.append(nmer_seqs, nmers_list)
     #writetxt(nmer_seqs, directory+'neg_nmers.txt')
-    sample_indices = np.random.randint(0, len(nmer_seqs), [2000,1])
+    sample_indices = np.random.randint(0, len(nmer_seqs), [40,1])
     training_sample = nmer_seqs[sample_indices]
-    writetxt2(training_sample, directory + 'sample_nseqs.txt' )
+    training_sample_centers = cluster.negative_centers(training_sample, directory)
+    writetxt3(training_sample_centers, directory + 'sample_nseqs_cluster.txt' )
     return nmer_seqs, neg_seq_dict
 
 ###############################################################################
@@ -343,74 +352,28 @@ def main():
     
     #makes training set of the positive sequences
     posseqs, pos_sequenceList, pos_dict = make_training_set(positive_sequences_file, 1)
+    
     #only need to do this once:
-    #negseqs_string, neg_seq_dict = gen_nmers_from_fa(negative_fa_file, 17, directory, pos_dict)
+    negseqs_string, neg_seq_dict = gen_nmers_from_fa(negative_fa_file, 17, directory, pos_dict)
     #this generates a entire set of negative sequences
     #from which we took a sample and put into sample_nseqs.txt
     
     #makes training set of the negative sequences
+    
     #negseqs, neg_sequenceList, neg_dict = make_training_set(directory + 'sample_nseqs.txt', 0)
     
-    negseqs, neg_sequenceList, neg_dict = make_training_set(directory + 'sample_nseqs.txt', 0)
     #puts the pos and neg sets together
-    full_training_set = np.hstack((posseqs, negseqs))
-    full_sequenceList = pos_sequenceList + neg_sequenceList
+    #full_training_set = np.hstack((posseqs, negseqs))
+    #full_sequenceList = pos_sequenceList + neg_sequenceList
     #initiate the neural network
-    NN = Network(posseqs,1,10,'sigmoid')
-    
+    #NN = Network(posseqs,1,10,'sigmoid')
+    '''
     currentcost = 100
     best_reg = .23
     learning_speed = .1
     error_tolerance = 1e-5
     
-    '''
-    regularization = np.linspace(0.0, .99, 100)
-    for j in range(len(regularization)):
-        NN = Network(full_training_set,1,10,'sigmoid')
-        NN = cost_func(NN, full_training_set, full_sequenceList, best_reg)
-        current= NN.avg_error 
-        i = 0
-        delta_error = 1
-        while delta_error >0 and i <25:
-            i=i+1
-            NN.forwardprop(full_training_set)
-            NN= backprop(NN, learning_speed, regularization[j])
-            NN = cost_func(NN, full_training_set, full_sequenceList, best_reg)
-            delta_error = current- NN.avg_error
-            if delta_error <0:
-                break
-            current = NN.avg_error
-        NN = cost_func(NN, full_training_set, full_sequenceList, regularization[j])
-        #print NN.avg_error
-        if NN.avg_error < currentcost:
-            currentcost = NN.avg_error
-            best_reg = regularization[j]
-    regularization = np.linspace(0.0, best_reg+best_reg*.01, 500)
-    for j in range(len(regularization)):
-        NN = Network(full_training_set,1,10,'sigmoid')
-        NN = cost_func(NN, full_training_set, full_sequenceList, best_reg)
-        for i in range(1,25):
-            NN.forwardprop(full_training_set)
-            NN= backprop(NN, learning_speed, regularization[j])
-        NN = cost_func(NN, full_training_set, full_sequenceList, regularization[j])
-        #print NN.avg_error
-        if NN.avg_error < currentcost:
-            currentcost = NN.avg_error
-            best_reg = regularization[j]
-    regularization = np.linspace(0.0, best_reg+best_reg*.01, 300)
-    for j in range(len(regularization)):
-        NN = Network(full_training_set,1,10,'sigmoid')
-        NN = cost_func(NN, full_training_set, full_sequenceList, best_reg)
-        for i in range(1,25):
-            NN.forwardprop(full_training_set)
-            NN= backprop(NN, learning_speed, regularization[j])
-        NN = cost_func(NN, full_training_set, full_sequenceList, regularization[j])
-        #print NN.avg_error
-        if NN.avg_error < currentcost:
-            currentcost = NN.avg_error
-            best_reg = regularization[j]
-    
-    '''
+
     test_output_file_name = 'test_output.txt'
     testseqs, test_sequenceList, test_dict = make_training_set(test_file, 0.5)
     
@@ -418,7 +381,7 @@ def main():
     
     print best_reg
     test_NN(NN, testseqs, test_sequenceList, directory + test_output_file_name)
-    
+    '''
     return 1
 
 if __name__ == '__main__':

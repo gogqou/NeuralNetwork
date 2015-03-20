@@ -68,10 +68,10 @@ def read_sequences(file):
     sequenceList = []
     for file_line in file_lines:
         seq = Sequence(file_line)
-        seq.nmers()
+        seq.nmers(3)
         sequenceList.append(seq)
 
-
+    return sequenceList
 
 ###############################################################################
 def readtxt(filename):
@@ -85,9 +85,8 @@ def readtxt(filename):
 # Output: the similarity between them (a floating point number)               #
 #                                                                             #
 
-def compute_similarity(seqA, seqB, tanimoto_dict):
-    #similarity = tanimoto_dict[(site_A.name, site_B.name)]+distance.euclidean(site_A.metric, site_B.metric)
-    similarity = distance.cityblock(seqA.metric, seqB.metric)
+def compute_similarity(seqA, seqB):
+    similarity = distance.cityblock(seqA.vector_rep, seqB.vector_rep)
     return similarity
 
 #                                                                             #
@@ -104,50 +103,44 @@ def compute_similarity(seqA, seqB, tanimoto_dict):
 #         (this is really a list of clusters, each of which is list of        #
 #         ActiveSite instances)                                               #
 
-def cluster_by_partitioning(active_sites):
+def cluster_by_partitioning(sequences):
     
-
-    # Part of the distance metric will be the multimer-state of the enzyme site
-    #so first calculate that and save it as a feature 
-    [orig_clusters, active_sites] = nmers(active_sites)
-    #get the tanimoto dictionary for comparisons of all active sites to all other active sites
-    tanimoto_dict = tanimoto_sites(active_sites)
-    active_sites = similarity_metric(active_sites)
     # randomly pick k centers
     #iterate through k and keep the lowest objective function clusters
-    best_obj_func = 10000
+    best_obj_func = 100000000
     #go through different values for number of clusters to find the one that gives the lowest obj function
-    for k in range(1,len(active_sites)/4, 3):
+    for k in range(20,len(sequences)/5, 150):
         #do a few tries at randomly generating centers
-        for repeat in range(4):
-            centers_indices = random.sample(xrange(0, len(active_sites)), k)
+        for repeat in range(1):
+            centers_indices = random.sample(xrange(0, len(sequences)), k)
             centers = []
             for i in range(len(centers_indices)):
-                centers.append(active_sites[centers_indices[i]])
+                centers.append(sequences[centers_indices[i]])
             #centers just gives you the indices, not the actual instances
             #do k-means_clusters--this function takes the centers and clusters, calculates new clusters
             # k_means_centers takes new clusterings and calculates new centers
-            current_clusters= k_means_clusters(active_sites, orig_clusters, centers, tanimoto_dict)
-            previous_epsilon = obj_function( current_clusters, centers, tanimoto_dict)
+            current_clusters= k_means_clusters(sequences, sequences, centers)
+            previous_epsilon = obj_function( current_clusters, centers)
             L = 0
             delta = previous_epsilon
             while delta>10 and L<600:
-                current_clusters= k_means_clusters(active_sites, current_clusters, centers, tanimoto_dict)
-                current_obj_func = obj_function(current_clusters, centers,tanimoto_dict)
-                centers = k_means_centers(current_clusters, centers, tanimoto_dict)
-                epsilon = current_obj_func-obj_function(current_clusters, centers,tanimoto_dict)
+                current_clusters= k_means_clusters(sequences, current_clusters, centers)
+                current_obj_func = obj_function(current_clusters, centers)
+                centers = k_means_centers(current_clusters, centers)
+                epsilon = current_obj_func-obj_function(current_clusters, centers)
                 delta = abs(epsilon - previous_epsilon)
                 previous_epsilon = epsilon
                 print 'clustering iteration', L, 'k = ', k
                 L = L+1
             if current_obj_func <best_obj_func:
                 best_clusters = current_clusters
+                best_centers= centers
                 best_obj_func = current_obj_func
                 best_k = k
             print current_obj_func, k
-    print best_k
-    print best_obj_func
-    return best_clusters
+    #print best_k
+    #print best_obj_func
+    return best_clusters, centers
 #                                                                             #
 #                                                                             #
 ###############################################################################
@@ -155,13 +148,13 @@ def cluster_by_partitioning(active_sites):
 ###############################################################################
 #                                                                             #
 #                                                                             #
-def obj_function(clusters, centers, tanimoto_dict):
+def obj_function(clusters, centers):
     
-    distance_matrix = np.zeros([len(centers),136])
+    distance_matrix = np.zeros([len(centers),2000])
     max_length = 0
     for i in range(len(centers)):
         for j in range(len(clusters[i])):
-            distance_matrix[i,j] = math.pow(compute_similarity(clusters[i][j], centers[i], tanimoto_dict), 2)
+            distance_matrix[i,j] = math.pow(compute_similarity(clusters[i][j], centers[i]), 2)
             if j> max_length:
                 max_length = j
     distance_matrix = distance_matrix[:,:max_length+1]
@@ -175,18 +168,18 @@ def obj_function(clusters, centers, tanimoto_dict):
 #calculates new clusterings from a set of centers                             #
 #calculates new centers/means from a new set of clusters                      #
 #                                                                             #
-def k_means_clusters(active_sites, clusters, centers, tanimoto_dict):
+def k_means_clusters(active_sites, clusters, centers):
     distance_matrix = np.zeros([len(active_sites), len(centers)])
     new_clusters = [[] for i in range(len(centers))]
     for i in range(len(active_sites)):
         for j in range(len(centers)):
-            distance_matrix[i,j] = compute_similarity(active_sites[i], centers[j], tanimoto_dict)
+            distance_matrix[i,j] = compute_similarity(active_sites[i], centers[j])
     max_indices= np.argmin(distance_matrix, 1)
     for k in range(len(max_indices)):
         new_clusters[max_indices[k]].append(active_sites[k])
     return new_clusters
 
-def k_means_centers(clusters, centers, tanimoto_dict):
+def k_means_centers(clusters, centers):
     
 
     #find distance from all points within a cluster to each other
@@ -196,7 +189,7 @@ def k_means_centers(clusters, centers, tanimoto_dict):
         distances = np.zeros([len(clusters[i]), 1])
         for j in range(len(clusters[i])):
             for k in range(len(clusters[i])):
-                distances[j] = distances[j]+compute_similarity(clusters[i][j], clusters[i][k], tanimoto_dict)
+                distances[j] = distances[j]+compute_similarity(clusters[i][j], clusters[i][k])
         min_indices = np.argmin(distances)
         new_centers.append(clusters[i][min_indices])
     return new_centers
@@ -220,7 +213,7 @@ def write_clustering(filename, clusters):
     for i in range(len(clusters)):
         out.write("\nCluster %d\n--------------\n" % i)
         for j in range(len(clusters[i])):
-            out.write("%s\n" % clusters[i][j])
+            out.write("%s\n" % clusters[i][j].seq)
 
     out.close()
 
@@ -231,17 +224,15 @@ def write_clustering(filename, clusters):
 #                                                                             #
 #                                                                             #
 #                                                                             #
-def main():
+def negative_centers():
     np.set_printoptions(threshold=1000, linewidth=1000, precision = 5, suppress = False)
-    directory = "C:\Users\Grace\Documents\GuanqingOuGoogleDrive\Backups\Berkeley\Classes\BMI203\bmi203-final-project\bmi203-final-project/"
-    file = 'negatives.txt'
-    read_sequences(directory+file)
-    #clustering = cluster_by_partitioning(sequences)
-    #write_clustering(targetfile, clustering)
-    
+    directory = "/home/gogqou/Documents/Classes/bmi203-final-project/"
+    file = 'sample_nseqs.txt'
+    targetfile = directory+'clustered_negatives.txt'
+    sequenceList = read_sequences(directory+file)
+    clustering, centers = cluster_by_partitioning(sequenceList)
+    write_clustering(targetfile, clustering)
+    print centers
 
-
+    return centers
 ###############################################################################
-
-if __name__ == '__main__':
-    main()

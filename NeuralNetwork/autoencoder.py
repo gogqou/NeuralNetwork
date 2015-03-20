@@ -104,7 +104,11 @@ class Network:
 
 def sigmoid(x):
     return 1/(1+np.exp(-x))
-
+def threshold(x):
+    if x >.5:
+        return 1
+    elif x<=.5:
+        return 0
 ###############################################################################
 def readtxt(filename):
     lines = [line.strip() for line in open(filename)]
@@ -172,7 +176,13 @@ def cost_func(NN, training_set, regularization):
     
     sum_weights_Hlayer = np.sum(np.square(NN.weights_Hlayer))
     sum_weights_output = np.sum(np.square(NN.weights_output))
-    training_set_sample_num = len(NN.errors)
+    training_set_sample_num = float(len(NN.errors))
+    #output = NN.output
+    #low_values_indices = output < .5  # Where values are low
+    #output[low_values_indices] = 0 
+    #high_val_indices = output>=.5
+    #output[high_val_indices] = 1
+    #NN.abs_error = 1.0/training_set_sample_num*np.sum(np.abs(NN.input-output))+ regularization/2.0*(sum_weights_Hlayer + sum_weights_output)
     NN.avg_error = 1.0/training_set_sample_num * np.sum(NN.errors) + regularization/2.0*(sum_weights_Hlayer + sum_weights_output)
     #NN.avg_error = 1.0/training_set_sample_num * np.sum(errors) 
     return NN
@@ -196,13 +206,12 @@ def train_NN(NN, training_set, test_set, learning_speed, error_tolerance, regula
     bias_Hlayer =NN.bias_weights_Hlayer
     #print NN.Hlayer_activation
     i=0
-    while NN.avg_error> error_tolerance and test_error>=1e-6 and i <=50000:
+    while NN.avg_error> error_tolerance and test_error>=1e-6 and i <=900000:
         print 'ITERATION = =============================================== ', i
         #forward propagate with the entire training set
-        print 'error= ', NN.avg_error
+        #print 'error= ', NN.avg_error
         NN=backprop(NN, learning_speed, regularization)
         NN = cost_func(NN, training_set, regularization)
-        
         
         weights_Hlayer = np.hstack((weights_Hlayer, np.reshape(NN.weights_Hlayer, [24, 1])))
         weights_output = np.hstack((weights_output, np.reshape(NN.weights_output, [24, 1])))
@@ -215,8 +224,10 @@ def train_NN(NN, training_set, test_set, learning_speed, error_tolerance, regula
         NN2=cost_func(NN, test_set, regularization)
         test_error = np.abs(last_test_error - NN2.avg_error) 
         last_test_error = NN2.avg_error
+        print 'error= ', NN2.avg_error
         i=i+1
     indices = np.linspace(0,i+1, i+1)
+    
     plt.figure(1)
     plt.subplot(211)
     for m in range(8):
@@ -228,8 +239,9 @@ def train_NN(NN, training_set, test_set, learning_speed, error_tolerance, regula
     #for k in range(3):
         #plot(indices, bias_Hlayer[k,:], '^') 
         #ylim([-1,1])
-    show()
-    
+    #show()
+    plt.savefig('/home/gogqou/Documents/Classes/bmi203-final-project/'+'learning_speed_'+str(learning_speed)+'_reg_'+str(regularization)+'run1.png')
+    plt.clf()
     return NN
 ###############################################################################
 
@@ -251,7 +263,7 @@ def main():
     np.set_printoptions(threshold=1000, linewidth=1000, precision = 5, suppress = False)
 
     directory = '/home/gogqou/Documents/Classes/bmi203-final-project/'
-    inputs = np.random.randint(2, size = (8,300)).astype(float)
+    inputs = np.random.randint(2, size = (8,500)).astype(float)
     test_set = np.random.randint(2, size = (8,400)).astype(float)
     '''
     inputs = np.zeros([8,8])
@@ -262,10 +274,10 @@ def main():
     
     NN = Network(inputs,8,3,'sigmoid')
     currentcost = 100
-    best_reg = .0023
-    learning_speed = .90
+    best_reg = .0015
+    learning_speed = .4
     error_tolerance = 1e-3
-    regularization = np.linspace(0.0, .99, 1000)
+    #regularization = np.linspace(0.0, .99, 1000)
     '''
     for j in range(len(regularization)):
         NN = Network(inputs,8,3,'sigmoid')
@@ -301,11 +313,36 @@ def main():
             currentcost = NN.avg_error
             best_reg = regularization[j]
     '''
+    '''
+    summary = np.zeros([1,3])
+    for best_reg in range(3, 120, 8):
+        best_reg = float(best_reg)/10000.0
+        for learning_speed in range(1, 100,2):
+            learning_speed = float(learning_speed/100.0)
+            NN = Network(inputs,8,3,'sigmoid')        
+            NN= train_NN(NN, inputs, test_set, float(learning_speed), error_tolerance, best_reg)
+            summary = np.vstack((summary, [best_reg, learning_speed, NN.avg_error]))
+            print 'reg= ', best_reg, 'learning speed = ', learning_speed, 'error = ', NN.avg_error 
+    
+    
+    outputFilename =  directory+'summary_0to10.txt'
+    out = open(outputFilename, 'w')
+    for i in range(len(summary)):
+        out.write('regularization  =' + str(summary[i][0])+ '\t'+ 'learning speed =  '+ str(summary[i][1])+ '\t' + 'error =  '+ str(summary[i][2])+ '\n')
+    out.close()
+    '''
     NN = Network(inputs,8,3,'sigmoid')        
-    NN= train_NN(NN, inputs, test_set, learning_speed, error_tolerance, best_reg)
-    print inputs
-    print NN.output
-    print best_reg
+    NN= train_NN(NN, inputs, test_set, float(learning_speed), error_tolerance, best_reg)
+    NN.forwardprop(inputs)
+    print NN.input
+    output = NN.output
+    low_values_indices = output < .5  # Where values are low
+    output[low_values_indices] = 0 
+    high_val_indices = output>=.5
+    output[high_val_indices] = 1
+    print output
+    print NN.input-output
+    print np.sum(np.abs(NN.input-output))
     '''
     test_output_file_name = 'test_output.txt'
     testseqs, test_sequenceList, test_dict = make_training_set(test_file, 0.5)

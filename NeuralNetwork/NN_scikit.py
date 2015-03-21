@@ -76,18 +76,18 @@ def make_training_set(file, posorneg= 1):
     
     file_lines = readtxt(file)
     
-    seqs = np.zeros([68, len(file_lines)])
+    seqs = np.empty([68, len(file_lines)])
     
     seq_dict = {}
     sequenceList = []
     i = 0
     for file_line in file_lines:
+        
         seq = Sequence(file_line, posorneg)
         seq_dict[seq.seq] = seq.label
         seqs[:,i] = np.array([seq.vector_rep[:,0]])
         sequenceList.append(seq)
-        i = i+1        
-    seqs = seqs[:,1:i+1]
+        i = i+1
     return seqs, sequenceList, seq_dict
 ###############################################################################
 
@@ -128,6 +128,19 @@ def nmers(seq, n, uniq_dict, pos_dict):
 
 ###############################################################################
 ###############################################################################
+#                                                                             #
+#  test training set with new sequences                                       #
+def testoutput(test_set, test_output, sequenceList, outputFilename):
+    
+    out = open(outputFilename, 'w')
+    for i in range(len(sequenceList)):
+        out.write(sequenceList[i].seq+ '\t'+str(test_output[i])+ '\n')
+    
+    print 'done test and writing output file'
+    return 1
+
+###############################################################################
+###############################################################################
 
 def main():
     np.set_printoptions(threshold=1000, linewidth=1000, precision = 5, suppress = False)
@@ -138,7 +151,6 @@ def main():
     
     #makes training set of the positive sequences
     posseqs, pos_sequenceList, pos_dict = make_training_set(positive_sequences_file, 1)
-    print posseqs.shape
     #only need to do this once:
     #negseqs_string, neg_seq_dict = gen_nmers_from_fa(negative_fa_file, 17, directory, pos_dict)
     #this generates a entire set of negative sequences
@@ -147,23 +159,22 @@ def main():
     #makes training set of the negative sequences
     
     negseqs, neg_sequenceList, neg_dict = make_training_set(directory + 'sample_nseqs_cluster.txt', 0)
-    print negseqs.shape
     #puts the pos and neg sets together
     full_training_set = np.transpose(np.hstack((posseqs, negseqs)))
     full_sequenceList = pos_sequenceList + neg_sequenceList
-    print len(full_sequenceList)
-    full_training_labels = np.zeros([len(full_sequenceList),1])
+    full_training_labels = np.zeros([len(full_sequenceList)])
     for i in range(len(full_sequenceList)):
         full_training_labels[i] = full_sequenceList[i].label
         
-    print full_training_set.shape
-    print full_training_labels.shape
-    clf = svm.SVR()
+    clf = svm.SVR(kernel = 'sigmoid', verbose= True)
     clf.fit(full_training_set, full_training_labels) 
     
     
-    test_output_file_name = 'test_output.txt'
+    test_output_file_name = 'sklearn_test_output.txt'
     testseqs, test_sequenceList, test_dict = make_training_set(test_file, 0.5)
+    test_outputs =  clf.predict(np.transpose(testseqs))
+    print test_outputs[1]
+    testoutput(testseqs, test_outputs, test_sequenceList, directory+test_output_file_name)
     return 1
 
 if __name__ == '__main__':

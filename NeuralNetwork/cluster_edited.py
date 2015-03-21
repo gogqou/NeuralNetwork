@@ -118,7 +118,7 @@ def cluster_by_partitioning(sequences):
     #iterate through k and keep the lowest objective function clusters
     best_obj_func = 1e20
     #go through different values for number of clusters to find the one that gives the lowest obj function
-    for k in range(190,220,20):
+    for k in range(1900,2200,20):
         #do a few tries at randomly generating centers
         for repeat in range(3):
             centers_indices = random.sample(xrange(0, len(sequences)), k)

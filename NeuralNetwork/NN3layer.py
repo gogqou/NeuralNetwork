@@ -127,10 +127,10 @@ def sigmoid(x):
 ###############################################################################
 #                                                                             #
 # gradient descent method to calculate error and help out with backprop       #
-def make_training_set(file, posorneg= 1):
+def make_training_set(file, posorneg):
     
     file_lines = readtxt(file)
-    seqs = np.zeros([68, 1])
+    seqs = np.empty([68, 1])
     
     seq_dict = {}
     sequenceList = []
@@ -183,8 +183,8 @@ def gen_nmers_from_fa(file, n, directory, pos_dict):
     sample_indices = np.random.randint(0, len(nmer_seqs), [20000,1])
     training_sample = nmer_seqs[sample_indices]
     training_sample_centers = cluster.negative_centers(training_sample, directory)
-    writetxt3(training_sample_centers, directory + 'sample_nseqs_cluster.txt' )
-    return nmer_seqs, neg_seq_dict
+    writetxt3(training_sample_centers, directory + 'all_nseqs_cluster.txt' )
+    return nmer_seqs, neg_seq_dict, training_sample_centers
 
 ###############################################################################
 
@@ -271,7 +271,7 @@ def cost_func(NN, training_set, sequenceList, regularization):
 ###############################################################################
 #                                                                             #
 #  train neural network with training set                                     #
-def train_NN(NN, training_set, sequenceList, test_set, test_sequenceList, regularization, learning_speed, error_tolerance):
+def train_NN(NN, training_set, sequenceList, xvalid_seqs, xvalid_sequenceList, regularization, learning_speed, error_tolerance):
     
     NN.forwardprop(training_set)
     NN= cost_func(NN, training_set, sequenceList, regularization)
@@ -287,9 +287,9 @@ def train_NN(NN, training_set, sequenceList, test_set, test_sequenceList, regula
     i = 0
     
     while NN.avg_error> error_tolerance and test_error>=1e-9:
-        print 'ITERATION = =============================================== ', i
+        #print 'ITERATION = =============================================== ', i
         #forward propagate with the entire training set
-        print 'error= ', NN.avg_error
+        #print 'error= ', NN.avg_error
         NN=backprop(NN, learning_speed, regularization)
         NN = cost_func(NN, training_set, sequenceList, regularization)
         
@@ -309,25 +309,26 @@ def train_NN(NN, training_set, sequenceList, test_set, test_sequenceList, regula
         error_temp = last_test_error - NN2.avg_error
         i = i+1
         if i>100 and error_change <=0:
-            print 'error going wrong way, stopped early'
+            #print 'error going wrong way, stopped early'
             break
         
     indices = np.linspace(0,i+1, i+1)
-    plt.figure(1)
-    plt.subplot(211)
-    for m in range(1):
-        plot(indices, errors_output[m,:], 'b')
-    plt.subplot(212)
-    for j in range(NN.n_hidden_nodes*NN.n_inputs):
-        plot(indices, weights_Hlayer[j,:], 'k') 
-        
-    for k in range(NN.n_hidden_nodes):
-        plot(indices, weights_output[k,:], 'y') 
-        #plot(indices, bias_Hlayer[k,:], '^') 
-        #ylim([-1,1])
-    plt.savefig('/home/gogqou/Documents/Classes/bmi203-final-project/'+'NN_10nodes_learning_speed_'+str(learning_speed)+'_reg_'+str(regularization)+'run1.png')
-    plt.clf()
-    return NN
+    if i >1000:
+        plt.figure(1)
+        plt.subplot(211)
+        for m in range(1):
+            plot(indices, errors_output[m,:], 'b')
+        plt.subplot(212)
+        for j in range(NN.n_hidden_nodes*NN.n_inputs):
+            plot(indices, weights_Hlayer[j,:], 'k') 
+            
+        for k in range(NN.n_hidden_nodes):
+            plot(indices, weights_output[k,:], 'y') 
+            #plot(indices, bias_Hlayer[k,:], '^') 
+            #ylim([-1,1])
+        plt.savefig('/home/gogqou/Documents/Classes/bmi203-final-project/'+'NN_' + str(NN.n_hidden_nodes) + 'nodes_learning_speed_'+str(learning_speed)+'_reg_'+str(regularization)+'run1.png')
+        plt.clf()
+    return NN, i
 ###############################################################################
 
 ###############################################################################
@@ -355,47 +356,55 @@ def main():
     posseqs, pos_sequenceList, pos_dict = make_training_set(positive_sequences_file, 1)
     
     #only need to do this once:
-    #negseqs_string, neg_seq_dict = gen_nmers_from_fa(negative_fa_file, 17, directory, pos_dict)
+    negseqs_string, neg_seq_dict, neg_cluster_centers = gen_nmers_from_fa(negative_fa_file, 17, directory, pos_dict)
     #this generates a entire set of negative sequences
     #from which we took a sample and put into sample_nseqs.txt
     
     #makes training set of the negative sequences
+    writetxt3(training_sample_centers, directory + 'sample_nseqs_cluster.txt' )
+    
+    
     
     negseqs, neg_sequenceList, neg_dict = make_training_set(directory + 'sample_nseqs_cluster.txt', 0)
+    
+    
+    xvalid_seqs, xvalid_sequenceList, xvalid_dict = make_training_set(directory + 'xvalid_nseqs_cluster.txt', 0)
     
     #puts the pos and neg sets together
     full_training_set = np.hstack((posseqs, negseqs))
     full_sequenceList = pos_sequenceList + neg_sequenceList
     #initiate the neural network
-    NN = Network(full_training_set,1,10,'sigmoid')
-    
-    currentcost = 100
-    best_reg = .04
-    learning_speed = .5
-    error_tolerance = 1e-5
-    
-    test_output_file_name = 'test_output.txt'
     testseqs, test_sequenceList, test_dict = make_training_set(test_file, 0.5)
-    
-    summary = np.zeros([1,3])
-    for best_reg in range(1, 999, 5):
-        best_reg = float(best_reg)/1000.0
-        for learning_speed in range(1, 100,5):
-            learning_speed = float(learning_speed/100.0)
-            NN = Network(full_training_set,1,10,'sigmoid')        
-            NN= train_NN(NN, full_training_set, full_sequenceList, testseqs, test_sequenceList, best_reg, learning_speed, error_tolerance)
-            summary = np.vstack((summary, [best_reg, learning_speed, NN.avg_error]))
-            print 'reg= ', best_reg, 'learning speed = ', learning_speed, 'error = ', NN.avg_error 
-    
-    
-    outputFilename =  directory+'summary_0to1_10nodes.txt'
+    '''
+    for hiddennodes in range(5,40, 2):
+        #NN = Network(full_training_set,1,hiddennodes,'sigmoid')
+        
+        currentcost = 100
+        best_reg = .04
+        learning_speed = .5
+        error_tolerance = 1e-5
+        
+        summary = np.zeros([1,4])
+        for best_reg in range(1, 99, 1):
+            best_reg = float(best_reg)/100.0
+            for learning_speed in range(1,100,10):
+                learning_speed = float(learning_speed/100.0)
+                NN = Network(full_training_set,1,hiddennodes,'sigmoid')        
+                NN, i = train_NN(NN, full_training_set, full_sequenceList, xvalid_seqs, xvalid_sequenceList, best_reg, learning_speed, error_tolerance)
+                summary = np.vstack((summary, [hiddennodes, best_reg, learning_speed, NN.avg_error]))
+                print 'hidden nodes = ', hiddennodes, 'reg= ', best_reg, 'learning speed = ', learning_speed, 'error = ', NN.avg_error, 'iterations = ', i  
+                if i > 1000:
+                    test_output_file_name = str(hiddennodes) + 'nodes_' + 'reg_'+str(best_reg) + 'lspeed_' + str(learning_speed) + 'output.txt'
+                    test_NN(NN, testseqs, test_sequenceList, directory + 'outputs/' + test_output_file_name)
+        
+    outputFilename =  directory+'summary_0to1_nodes.txt'
     out = open(outputFilename, 'w')
     for i in range(len(summary)):
-        out.write('regularization  =' + str(summary[i][0])+ '\t'+ 'learning speed =  '+ str(summary[i][1])+ '\t' + 'error =  '+ str(summary[i][2])+ '\n')
+        out.write('hidden nodes = '+ str(summary[i][0]) + '\t'+ 'regularization  =' + str(summary[i][1])+ '\t'+ 'learning speed =  '+ str(summary[i][2])+ '\t' + 'error =  '+ str(summary[i][3])+ '\n')
     out.close()
     
 
-    
+    '''
     
     #NN= train_NN(NN, full_training_set, full_sequenceList, testseqs, test_sequenceList, best_reg, learning_speed = .1, error_tolerance = 1e-6)
     

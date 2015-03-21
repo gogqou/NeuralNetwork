@@ -41,7 +41,7 @@ class Sequence:
     def __init__(self, seq_ATCG):
         self.seq = seq_ATCG
         self.length = len(seq_ATCG)
-        self.vector_rep = np.zeros([np.power(3,4), 1])
+        self.vector_rep = np.zeros([np.power(4,4), 1])
         self.vector_length = len(self.vector_rep)
         self.center = []
         nucls = ['A', 'C', 'G', 'T']
@@ -51,13 +51,15 @@ class Sequence:
         for i in range(4):
             for j in range(4):
                 for k in range(4):
-                    kmer_list.append(nucls[i]+nucls[j]+nucls[k])
-                    self.kmer_dict[nucls[i]+nucls[j]+nucls[k]]= index
-                    index = index+1          
+                    for m in range(4):
+                        kmer_list.append(nucls[i]+nucls[j]+nucls[k]+nucls[m])
+                        #print nucls[i]+nucls[j]+nucls[k]+nucls[m]
+                        self.kmer_dict[nucls[i]+nucls[j]+nucls[k]+nucls[m]]= index
+                        index = index+1          
         
     def nmers(self, k):
         for i in range(0, self.length-k):
-            vector_index = self.kmer_dict[self.seq[i:i+3]]
+            vector_index = self.kmer_dict[self.seq[i:i+k]]
             self.vector_rep[vector_index] = self.vector_rep[vector_index]+1
             
 ###############################################################################
@@ -68,7 +70,7 @@ def read_sequences(file):
     sequenceList = []
     for file_line in file_lines:
         seq = Sequence(file_line)
-        seq.nmers(3)
+        seq.nmers(4)
         sequenceList.append(seq)
 
     return sequenceList
@@ -77,7 +79,7 @@ def read_seq_list(sequences):
     sequenceList = []
     for i in range(len(sequences)):
         seq = Sequence(sequences[i][0])
-        seq.nmers(3)
+        seq.nmers(4)
         sequenceList.append(seq)
     return sequenceList
 ###############################################################################
@@ -116,9 +118,9 @@ def cluster_by_partitioning(sequences):
     #iterate through k and keep the lowest objective function clusters
     best_obj_func = 1e20
     #go through different values for number of clusters to find the one that gives the lowest obj function
-    for k in range(1,len(sequences)/3, 3):
+    for k in range(190,220,20):
         #do a few tries at randomly generating centers
-        for repeat in range(2):
+        for repeat in range(3):
             centers_indices = random.sample(xrange(0, len(sequences)), k)
             centers = []
             for i in range(len(centers_indices)):
@@ -130,7 +132,7 @@ def cluster_by_partitioning(sequences):
             previous_epsilon = obj_function(current_clusters, centers)
             L = 0
             delta = previous_epsilon
-            while delta>10 and L<600:
+            while delta>2 and L<600:
                 current_clusters= k_means_clusters(sequences, current_clusters, centers)
                 current_obj_func = obj_function(current_clusters, centers)
                 centers = k_means_centers(current_clusters, centers)
@@ -157,7 +159,7 @@ def cluster_by_partitioning(sequences):
 #                                                                             #
 def obj_function(clusters, centers):
     
-    distance_matrix = np.zeros([len(centers),40])
+    distance_matrix = np.zeros([len(centers),20000])
     max_length = 0
     for i in range(len(centers)):
         for j in range(len(clusters[i])):
@@ -232,6 +234,7 @@ def write_clustering(filename, clusters):
 #                                                                             #
 #                                                                             #
 def negative_centers(inputsequences, directory):
+    print 'clustering'
     np.set_printoptions(threshold=1000, linewidth=1000, precision = 5, suppress = False)
     targetfile = directory+'clustered_negatives.txt'
     sequenceList = read_seq_list(inputsequences)

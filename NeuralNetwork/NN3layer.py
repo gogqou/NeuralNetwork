@@ -180,7 +180,7 @@ def gen_nmers_from_fa(file, n, directory, pos_dict):
         nmers_list = nmers(seq, n, uniq_dict, pos_dict)
         nmer_seqs = np.append(nmer_seqs, nmers_list)
     #writetxt(nmer_seqs, directory+'neg_nmers.txt')
-    sample_indices = np.random.randint(0, len(nmer_seqs), [40,1])
+    sample_indices = np.random.randint(0, len(nmer_seqs), [20000,1])
     training_sample = nmer_seqs[sample_indices]
     training_sample_centers = cluster.negative_centers(training_sample, directory)
     writetxt3(training_sample_centers, directory + 'sample_nseqs_cluster.txt' )
@@ -280,8 +280,8 @@ def train_NN(NN, training_set, sequenceList, test_set, test_sequenceList, regula
     test_error = 5
     last_test_error = 0
     
-    weights_Hlayer = np.reshape(NN.weights_Hlayer, [680, 1])
-    weights_output = np.reshape(NN.weights_output, [10, 1])
+    weights_Hlayer = np.reshape(NN.weights_Hlayer, [NN.n_hidden_nodes*NN.n_inputs, 1])
+    weights_output = np.reshape(NN.weights_output, [NN.n_hidden_nodes, 1])
     errors_output = np.transpose(np.array([NN.errors[:,0]]))
     bias_Hlayer =NN.bias_weights_Hlayer
     i = 0
@@ -294,8 +294,8 @@ def train_NN(NN, training_set, sequenceList, test_set, test_sequenceList, regula
         NN = cost_func(NN, training_set, sequenceList, regularization)
         
         
-        weights_Hlayer = np.hstack((weights_Hlayer, np.reshape(NN.weights_Hlayer, [680, 1])))
-        weights_output = np.hstack((weights_output, np.reshape(NN.weights_output, [10, 1])))
+        weights_Hlayer = np.hstack((weights_Hlayer, np.reshape(NN.weights_Hlayer, [NN.n_hidden_nodes*NN.n_inputs, 1])))
+        weights_output = np.hstack((weights_output, np.reshape(NN.weights_output, [NN.n_hidden_nodes, 1])))
         errors_output= np.hstack((errors_output,np.transpose(np.array([NN.errors[:,0]]))))
         bias_Hlayer = np.hstack((bias_Hlayer, NN.bias_weights_Hlayer))
         
@@ -318,14 +318,15 @@ def train_NN(NN, training_set, sequenceList, test_set, test_sequenceList, regula
     for m in range(1):
         plot(indices, errors_output[m,:], 'b')
     plt.subplot(212)
-    for j in range(680):
+    for j in range(NN.n_hidden_nodes*NN.n_inputs):
         plot(indices, weights_Hlayer[j,:], 'k') 
         
-    for k in range(10):
+    for k in range(NN.n_hidden_nodes):
         plot(indices, weights_output[k,:], 'y') 
         #plot(indices, bias_Hlayer[k,:], '^') 
         #ylim([-1,1])
-    show()
+    plt.savefig('/home/gogqou/Documents/Classes/bmi203-final-project/'+'NN_10nodes_learning_speed_'+str(learning_speed)+'_reg_'+str(regularization)+'run1.png')
+    plt.clf()
     return NN
 ###############################################################################
 
@@ -354,34 +355,53 @@ def main():
     posseqs, pos_sequenceList, pos_dict = make_training_set(positive_sequences_file, 1)
     
     #only need to do this once:
-    negseqs_string, neg_seq_dict = gen_nmers_from_fa(negative_fa_file, 17, directory, pos_dict)
+    #negseqs_string, neg_seq_dict = gen_nmers_from_fa(negative_fa_file, 17, directory, pos_dict)
     #this generates a entire set of negative sequences
     #from which we took a sample and put into sample_nseqs.txt
     
     #makes training set of the negative sequences
     
-    #negseqs, neg_sequenceList, neg_dict = make_training_set(directory + 'sample_nseqs.txt', 0)
+    negseqs, neg_sequenceList, neg_dict = make_training_set(directory + 'sample_nseqs_cluster.txt', 0)
     
     #puts the pos and neg sets together
-    #full_training_set = np.hstack((posseqs, negseqs))
-    #full_sequenceList = pos_sequenceList + neg_sequenceList
+    full_training_set = np.hstack((posseqs, negseqs))
+    full_sequenceList = pos_sequenceList + neg_sequenceList
     #initiate the neural network
-    #NN = Network(posseqs,1,10,'sigmoid')
-    '''
+    NN = Network(full_training_set,1,10,'sigmoid')
+    
     currentcost = 100
-    best_reg = .23
-    learning_speed = .1
+    best_reg = .04
+    learning_speed = .5
     error_tolerance = 1e-5
     
-
     test_output_file_name = 'test_output.txt'
     testseqs, test_sequenceList, test_dict = make_training_set(test_file, 0.5)
     
-    NN= train_NN(NN, full_training_set, full_sequenceList, testseqs, test_sequenceList, best_reg, learning_speed = .1, error_tolerance = 1e-6)
+    summary = np.zeros([1,3])
+    for best_reg in range(1, 999, 5):
+        best_reg = float(best_reg)/1000.0
+        for learning_speed in range(1, 100,5):
+            learning_speed = float(learning_speed/100.0)
+            NN = Network(full_training_set,1,10,'sigmoid')        
+            NN= train_NN(NN, full_training_set, full_sequenceList, testseqs, test_sequenceList, best_reg, learning_speed, error_tolerance)
+            summary = np.vstack((summary, [best_reg, learning_speed, NN.avg_error]))
+            print 'reg= ', best_reg, 'learning speed = ', learning_speed, 'error = ', NN.avg_error 
     
-    print best_reg
-    test_NN(NN, testseqs, test_sequenceList, directory + test_output_file_name)
-    '''
+    
+    outputFilename =  directory+'summary_0to1_10nodes.txt'
+    out = open(outputFilename, 'w')
+    for i in range(len(summary)):
+        out.write('regularization  =' + str(summary[i][0])+ '\t'+ 'learning speed =  '+ str(summary[i][1])+ '\t' + 'error =  '+ str(summary[i][2])+ '\n')
+    out.close()
+    
+
+    
+    
+    #NN= train_NN(NN, full_training_set, full_sequenceList, testseqs, test_sequenceList, best_reg, learning_speed = .1, error_tolerance = 1e-6)
+    
+    #print best_reg
+    #test_NN(NN, testseqs, test_sequenceList, directory + test_output_file_name)
+    
     return 1
 
 if __name__ == '__main__':

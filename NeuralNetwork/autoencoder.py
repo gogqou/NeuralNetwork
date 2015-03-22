@@ -31,10 +31,9 @@ instrumented for cross validation
 import numpy as np
 import sys
 import math
-from Bio import SeqIO
-from pylab import plot, show, ylim, yticks
-import matplotlib.pyplot as plt
-from matplotlib import *
+#from pylab import plot, show, ylim, yticks
+#import matplotlib.pyplot as plt
+#from matplotlib import *
 ###############################################################################
 #                                                                             #
 # class for a neural network                                                  #
@@ -192,13 +191,13 @@ def cost_func(NN, training_set, regularization):
 ###############################################################################
 #                                                                             #
 #  train neural network with training set                                     #
-def train_NN(NN, training_set, test_set, learning_speed, error_tolerance, regularization = .008):
+def train_NN(NN, training_set, xvalid_set, learning_speed, error_tolerance, regularization = .008):
     NN.forwardprop(training_set)
     NN= cost_func(NN, training_set, regularization)
     error_change = 5
-    last_error = 0
+    last_error = 1e5
     test_error = 5
-    last_test_error = 0
+    last_test_error = 1e5
     
     weights_Hlayer = np.reshape(NN.weights_Hlayer, [24, 1])
     weights_output = np.reshape(NN.weights_output, [24, 1])
@@ -206,7 +205,7 @@ def train_NN(NN, training_set, test_set, learning_speed, error_tolerance, regula
     bias_Hlayer =NN.bias_weights_Hlayer
     #print NN.Hlayer_activation
     i=0
-    while NN.avg_error> error_tolerance and test_error>=1e-6 and i <=900000:
+    while NN.avg_error> error_tolerance and test_error>=1e-5 and i <=90000:
         print 'ITERATION = =============================================== ', i
         #forward propagate with the entire training set
         #print 'error= ', NN.avg_error
@@ -221,13 +220,16 @@ def train_NN(NN, training_set, test_set, learning_speed, error_tolerance, regula
         error_change = np.abs(last_error - NN.avg_error)
         last_error = NN.avg_error
         
-        NN2=cost_func(NN, test_set, regularization)
-        test_error = np.abs(last_test_error - NN2.avg_error) 
+        NN2=cost_func(NN, xvalid_set, regularization)
+        test_error = last_test_error - NN2.avg_error
+        
+        
+         
         last_test_error = NN2.avg_error
         print 'error= ', NN2.avg_error
         i=i+1
     indices = np.linspace(0,i+1, i+1)
-    
+    '''
     plt.figure(1)
     plt.subplot(211)
     for m in range(8):
@@ -242,6 +244,7 @@ def train_NN(NN, training_set, test_set, learning_speed, error_tolerance, regula
     #show()
     plt.savefig('/home/gogqou/Documents/Classes/bmi203-final-project/'+'learning_speed_'+str(learning_speed)+'_reg_'+str(regularization)+'run1.png')
     plt.clf()
+    '''
     return NN
 ###############################################################################
 
@@ -263,9 +266,9 @@ def main():
     np.set_printoptions(threshold=1000, linewidth=1000, precision = 5, suppress = False)
 
     directory = '/home/gogqou/Documents/Classes/bmi203-final-project/'
-    inputs = np.random.randint(2, size = (8,500)).astype(float)
-    xvalid_set = np.random.randint(2, size = (8,400)).astype(float)
-    test_set = np.random.randint(2, size = (8,400)).astype(float)
+    inputs = np.random.randint(2, size = (8,30000)).astype(float)
+    xvalid_set = np.random.randint(2, size = (8,500)).astype(float)
+    test_set = np.random.randint(2, size = (8,10)).astype(float)
     '''
     inputs = np.zeros([8,8])
     for i in range(8):
@@ -275,8 +278,8 @@ def main():
     
     NN = Network(inputs,8,3,'sigmoid')
     currentcost = 100
-    best_reg = .0015
-    learning_speed = .4
+    best_reg = .006
+    learning_speed = .6
     error_tolerance = 1e-3
     #regularization = np.linspace(0.0, .99, 1000)
     '''
@@ -335,13 +338,16 @@ def main():
     NN = Network(inputs,8,3,'sigmoid')        
     NN= train_NN(NN, inputs, xvalid_set, float(learning_speed), error_tolerance, best_reg)
     NN.forwardprop(test_set)
+    print 'input'
     print NN.input
     output = NN.output
     low_values_indices = output < .5  # Where values are low
     output[low_values_indices] = 0 
     high_val_indices = output>=.5
     output[high_val_indices] = 1
+    print 'output'
     print output
+    print 'error'
     print NN.input-output
     print np.sum(np.abs(NN.input-output))
     '''

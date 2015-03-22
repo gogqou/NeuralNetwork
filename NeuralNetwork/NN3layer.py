@@ -1,3 +1,5 @@
+
+#!C:\Users\Grace\AppData\Local\Enthought\Canopy\User\python.exe
 '''
 Created on Mar 9, 2015
 
@@ -295,10 +297,10 @@ def train_NN(NN, training_set, sequenceList, xvalid_seqs, xvalid_sequenceList, r
     bias_Hlayer =NN.bias_weights_Hlayer
     i = 0
     
-    while NN.avg_error> error_tolerance and test_error>=1e-6 and i < 25000:
-        #print 'ITERATION = =============================================== ', i
+    while NN.avg_error> error_tolerance and test_error>=1e-5 and i < 25000:
+        print 'ITERATION = =============================================== ', i
         #forward propagate with the entire training set
-        #print 'error= ', NN.avg_error
+        print 'error= ', NN.avg_error
         NN=backprop(NN, learning_speed, regularization)
         NN = cost_func(NN, training_set, sequenceList, regularization)
         
@@ -322,7 +324,7 @@ def train_NN(NN, training_set, sequenceList, xvalid_seqs, xvalid_sequenceList, r
             break
         
     indices = np.linspace(0,i+1, i+1)
-    if i >1000:
+    if i >100:
         plt.figure(1)
         plt.subplot(211)
         for m in range(1):
@@ -335,7 +337,7 @@ def train_NN(NN, training_set, sequenceList, xvalid_seqs, xvalid_sequenceList, r
             plot(indices, weights_output[k,:], 'y') 
             #plot(indices, bias_Hlayer[k,:], '^') 
             #ylim([-1,1])
-        plt.savefig('/home/gogqou/Documents/Classes/bmi203-final-project/'+'NN_' + str(NN.n_hidden_nodes) + 'nodes_learning_speed_'+str(learning_speed)+'_reg_'+str(regularization)+'run' + str(k)+'.png')
+        plt.savefig('C:\\Users\\Grace\\Documents\\GuanqingOuGoogleDrive\Backups\\Berkeley\\Classes\\BMI203\\bmi203-final-project\\bmi203-final-project\\'+'NN_' + str(NN.n_hidden_nodes) + 'nodes_learning_speed_'+str(learning_speed)+'_reg_'+str(regularization)+'run' + str(k)+'.png')
         plt.clf()
     return NN, i
 ###############################################################################
@@ -345,20 +347,20 @@ def k_folds(all_neg_clusters, posseqs, pos_sequenceList,  kfold, directory, test
     testseqs, test_sequenceList, test_dict = make_training_set(test_file, 0.5)
     
     
-    for hiddennodes in range(3,60, 2):
+    for hiddennodes in range(35,40, 1):
         #initiate the neural network
         NN = Network(posseqs,1,hiddennodes,'sigmoid')
         
         currentcost = 100
-        best_reg = .04
-        learning_speed = .5
+        best_reg = .008
+        learning_speed = .0105
         error_tolerance = 1e-5
         
         summary = np.empty([1,4])
-        for best_reg in range(1, 99, 15):
-            best_reg = float(best_reg)/100.0
-            for learning_speed in range(1,100,10):
-                learning_speed = float(learning_speed/100.0)
+        for best_reg in range(6, 7, 1):
+            best_reg = float(best_reg)/1000.0
+            for learning_speed in range(105,110,3):
+                learning_speed = float(learning_speed/10000.0)
                 lowest_error = 1e10
                 highest_i = 0
                 for k in range(kfold):
@@ -371,13 +373,24 @@ def k_folds(all_neg_clusters, posseqs, pos_sequenceList,  kfold, directory, test
                     
                     xvalid_set = all_neg_clusters[0:k*train_num] + all_neg_clusters[(k+1)*train_num+1:len(all_neg_clusters)]
                     writetxt3(xvalid_set, directory + 'xvalid_nseqs_cluster.txt' )
-                    xvalid_seqs, xvalid_sequenceList, xvalid_dict = make_training_set(directory + 'xvalid_nseqs_cluster.txt', 0)
-                
+                    xvalid_neg_seqs, xvalid_neg_sequenceList, xvalid_dict = make_training_set(directory + 'xvalid_nseqs_cluster.txt', 0)
+                    
+                    pos_train_num = np.random.randint(3)
+                    pos_train_folds = 3
+                    pos_train_index = len(pos_sequenceList)/pos_train_folds
+                    xvalid_pos_seqs= posseqs[:, pos_train_num * pos_train_index+1: (pos_train_num+1)*pos_train_index ]
+                    train_pos_seqs = np.hstack((posseqs[:, 0:pos_train_num * pos_train_index],  posseqs[:, (pos_train_num+1)*pos_train_index+1:len(pos_sequenceList)]))
+                    xvalid_pos_sequencelist= pos_sequenceList[pos_train_num * pos_train_index+1:(pos_train_num+1)*pos_train_index ]
+                    train_pos_sequenceList = pos_sequenceList[0:pos_train_num * pos_train_index] + pos_sequenceList[(pos_train_num+1)*pos_train_index +1:len(pos_sequenceList)]
+               
+                    
                     #puts the pos and neg sets together
-                    full_training_set = np.hstack((posseqs, negseqs))
-                    full_sequenceList = pos_sequenceList + neg_sequenceList   
-                     
-                    newNN, i = train_NN(NN, full_training_set, full_sequenceList, xvalid_seqs, xvalid_sequenceList, best_reg, learning_speed, error_tolerance, k)
+                    full_training_set = np.hstack((train_pos_seqs, negseqs))
+                    full_sequenceList = train_pos_sequenceList + neg_sequenceList 
+                    xvalid_seqs = np.hstack((xvalid_neg_seqs,xvalid_pos_seqs ))
+                    xvalid_sequenceList  = xvalid_neg_sequenceList+ xvalid_pos_sequencelist 
+                    print 'hidden nodes = ', hiddennodes, 'reg= ', best_reg, 'learning speed = ', learning_speed, 
+                    #newNN, i = train_NN(NN, full_training_set, full_sequenceList, xvalid_seqs, xvalid_sequenceList, best_reg, learning_speed, error_tolerance, k)
                     
                     if newNN.avg_error < lowest_error:
                         NN=newNN
@@ -387,9 +400,9 @@ def k_folds(all_neg_clusters, posseqs, pos_sequenceList,  kfold, directory, test
                         
                 summary = np.vstack((summary, [hiddennodes, best_reg, learning_speed, NN.avg_error]))
                 print 'hidden nodes = ', hiddennodes, 'reg= ', best_reg, 'learning speed = ', learning_speed, 'error = ', NN.avg_error, 'iterations = ', highest_i  
-                if highest_i > 1000:
+                if highest_i > 100:
                     test_output_file_name = str(hiddennodes) + 'nodes_' + 'reg_'+str(best_reg) + 'lspeed_' + str(learning_speed) + 'output.txt'
-                    test_NN(NN, testseqs, test_sequenceList, directory + 'outputs/' + test_output_file_name)
+                    test_NN(NN, testseqs, test_sequenceList, directory + 'outputs\\' + test_output_file_name)
         
     outputFilename =  directory+'summary_0to1_nodes.txt'
     out = open(outputFilename, 'w')
@@ -422,7 +435,7 @@ def main():
     positive_sequences_file = sys.argv[1]
     negative_fa_file = sys.argv[2]
     test_file = sys.argv[3]
-    directory = '/home/gogqou/Documents/Classes/bmi203-final-project/'
+    directory = 'C:\\Users\\Grace\\Documents\\GuanqingOuGoogleDrive\Backups\\Berkeley\\Classes\\BMI203\\bmi203-final-project\\bmi203-final-project\\'
     
     #makes training set of the positive sequences
     posseqs, pos_sequenceList, pos_dict = make_training_set(positive_sequences_file, 1)

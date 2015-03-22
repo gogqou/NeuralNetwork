@@ -264,6 +264,7 @@ def main():
 
     directory = '/home/gogqou/Documents/Classes/bmi203-final-project/'
     inputs = np.random.randint(2, size = (8,500)).astype(float)
+    xvalid_set = np.random.randint(2, size = (8,400)).astype(float)
     test_set = np.random.randint(2, size = (8,400)).astype(float)
     '''
     inputs = np.zeros([8,8])
@@ -332,8 +333,8 @@ def main():
     out.close()
     '''
     NN = Network(inputs,8,3,'sigmoid')        
-    NN= train_NN(NN, inputs, test_set, float(learning_speed), error_tolerance, best_reg)
-    NN.forwardprop(inputs)
+    NN= train_NN(NN, inputs, xvalid_set, float(learning_speed), error_tolerance, best_reg)
+    NN.forwardprop(test_set)
     print NN.input
     output = NN.output
     low_values_indices = output < .5  # Where values are low

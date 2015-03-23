@@ -266,8 +266,8 @@ def main():
     np.set_printoptions(threshold=1000, linewidth=1000, precision = 5, suppress = False)
 
     directory = '/home/gogqou/Documents/Classes/bmi203-final-project/'
-    inputs = np.random.randint(2, size = (8,30000)).astype(float)
-    xvalid_set = np.random.randint(2, size = (8,500)).astype(float)
+    inputs = np.random.randint(2, size = (8,50000)).astype(float)
+    xvalid_set = np.random.randint(2, size = (8,1000)).astype(float)
     test_set = np.random.randint(2, size = (8,10)).astype(float)
     '''
     inputs = np.zeros([8,8])
@@ -278,7 +278,7 @@ def main():
     
     NN = Network(inputs,8,3,'sigmoid')
     currentcost = 100
-    best_reg = .006
+    best_reg = .007
     learning_speed = .6
     error_tolerance = 1e-3
     #regularization = np.linspace(0.0, .99, 1000)
@@ -341,6 +341,8 @@ def main():
     print 'input'
     print NN.input
     output = NN.output
+    print 'non threshold'
+    print NN.output
     low_values_indices = output < .5  # Where values are low
     output[low_values_indices] = 0 
     high_val_indices = output>=.5

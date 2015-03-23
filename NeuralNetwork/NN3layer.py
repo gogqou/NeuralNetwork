@@ -282,7 +282,7 @@ def cost_func(NN, training_set, sequenceList, regularization):
 ###############################################################################
 #                                                                             #
 #  train neural network with training set                                     #
-def train_NN(NN, training_set, sequenceList, xvalid_seqs, xvalid_sequenceList, regularization, learning_speed, error_tolerance, k):
+def train_NN(NN, training_set, sequenceList, xvalid_seqs, xvalid_sequenceList, regularization, learning_speed, error_tolerance, q):
     
     NN.forwardprop(training_set)
     NN= cost_func(NN, training_set, sequenceList, regularization)
@@ -297,10 +297,10 @@ def train_NN(NN, training_set, sequenceList, xvalid_seqs, xvalid_sequenceList, r
     bias_Hlayer =NN.bias_weights_Hlayer
     i = 0
     
-    while NN.avg_error> error_tolerance and test_error>=1e-5 and i < 25000:
-        print 'ITERATION = =============================================== ', i
+    while NN.avg_error> error_tolerance and test_error>=1e-4 and i < 25000:
+        #print 'ITERATION = =============================================== ', i
         #forward propagate with the entire training set
-        print 'error= ', NN.avg_error
+        #print 'error= ', NN.avg_error
         NN=backprop(NN, learning_speed, regularization)
         NN = cost_func(NN, training_set, sequenceList, regularization)
         
@@ -337,7 +337,7 @@ def train_NN(NN, training_set, sequenceList, xvalid_seqs, xvalid_sequenceList, r
             plot(indices, weights_output[k,:], 'y') 
             #plot(indices, bias_Hlayer[k,:], '^') 
             #ylim([-1,1])
-        plt.savefig('C:\\Users\\Grace\\Documents\\GuanqingOuGoogleDrive\Backups\\Berkeley\\Classes\\BMI203\\bmi203-final-project\\bmi203-final-project\\'+'NN_' + str(NN.n_hidden_nodes) + 'nodes_learning_speed_'+str(learning_speed)+'_reg_'+str(regularization)+'run' + str(k)+'.png')
+        plt.savefig('C:\\Users\\Grace\\Documents\\GuanqingOuGoogleDrive\Backups\\Berkeley\\Classes\\BMI203\\bmi203-final-project\\bmi203-final-project\\'+'NN_' + str(NN.n_hidden_nodes) + 'nodes_learning_speed_'+str(learning_speed)+'_reg_'+str(regularization)+'run' + str(q)+'.png')
         plt.clf()
     return NN, i
 ###############################################################################
@@ -347,31 +347,31 @@ def k_folds(all_neg_clusters, posseqs, pos_sequenceList,  kfold, directory, test
     testseqs, test_sequenceList, test_dict = make_training_set(test_file, 0.5)
     
     
-    for hiddennodes in range(35,40, 1):
-        #initiate the neural network
-        NN = Network(posseqs,1,hiddennodes,'sigmoid')
-        
+    for hiddennodes in range(40,70, 5):
         currentcost = 100
         best_reg = .008
         learning_speed = .0105
         error_tolerance = 1e-5
         
         summary = np.empty([1,4])
-        for best_reg in range(6, 7, 1):
+        best_performance_error = 1e3
+        for best_reg in range(7, 25, 5):
             best_reg = float(best_reg)/1000.0
-            for learning_speed in range(105,110,3):
-                learning_speed = float(learning_speed/10000.0)
+            for learning_speed in range(9,15,3):
+                learning_speed = float(learning_speed/1000.0)
                 lowest_error = 1e10
                 highest_i = 0
-                for k in range(kfold):
-                    
+                error_sum = 0
+                for q in range(kfold):
+                    #initiate the neural network
+                    NN = Network(posseqs,1,hiddennodes,'sigmoid')
                     train_num = len(all_neg_clusters)/kfold
                     xvalid_num = len(all_neg_clusters)- train_num
-                    neg_train_set = all_neg_clusters[(k)*train_num:k*train_num+train_num]
+                    neg_train_set = all_neg_clusters[(q)*train_num:q*train_num+train_num]
                     writetxt3(neg_train_set, directory + 'sample_nseqs_cluster.txt' )
                     negseqs, neg_sequenceList, neg_dict = make_training_set(directory + 'sample_nseqs_cluster.txt', 0)
                     
-                    xvalid_set = all_neg_clusters[0:k*train_num] + all_neg_clusters[(k+1)*train_num+1:len(all_neg_clusters)]
+                    xvalid_set = all_neg_clusters[0:q*train_num] + all_neg_clusters[(q+1)*train_num+1:len(all_neg_clusters)]
                     writetxt3(xvalid_set, directory + 'xvalid_nseqs_cluster.txt' )
                     xvalid_neg_seqs, xvalid_neg_sequenceList, xvalid_dict = make_training_set(directory + 'xvalid_nseqs_cluster.txt', 0)
                     
@@ -390,31 +390,34 @@ def k_folds(all_neg_clusters, posseqs, pos_sequenceList,  kfold, directory, test
                     xvalid_seqs = np.hstack((xvalid_neg_seqs,xvalid_pos_seqs ))
                     xvalid_sequenceList  = xvalid_neg_sequenceList+ xvalid_pos_sequencelist 
                     print 'hidden nodes = ', hiddennodes, 'reg= ', best_reg, 'learning speed = ', learning_speed, 
-                    #newNN, i = train_NN(NN, full_training_set, full_sequenceList, xvalid_seqs, xvalid_sequenceList, best_reg, learning_speed, error_tolerance, k)
-                    
+                    newNN, i = train_NN(NN, full_training_set, full_sequenceList, xvalid_seqs, xvalid_sequenceList, best_reg, learning_speed, error_tolerance, q)
+                    error_sum = error_sum + newNN.avg_error
                     if newNN.avg_error < lowest_error:
-                        NN=newNN
-                        lowest_error = NN.avg_error 
+                        bestNN=newNN
+                        lowest_error =newNN.avg_error 
                     if i > highest_i:
                         highest_i = i    
-                        
-                summary = np.vstack((summary, [hiddennodes, best_reg, learning_speed, NN.avg_error]))
-                print 'hidden nodes = ', hiddennodes, 'reg= ', best_reg, 'learning speed = ', learning_speed, 'error = ', NN.avg_error, 'iterations = ', highest_i  
-                if highest_i > 100:
+                avg_kfolds_error = float(error_sum/kfold)
+                if avg_kfolds_error < best_performance_error:
+                    reg = best_reg
+                    lspeed = learning_speed
+                    keep_NN = bestNN      
+                    print reg, lspeed
+                summary = np.vstack((summary, [hiddennodes, best_reg, learning_speed, avg_kfolds_error]))
+                print 'hidden nodes = ', hiddennodes, 'reg= ', best_reg, 'learning speed = ', learning_speed, 'error = ', avg_kfolds_error, 'iterations = ', highest_i  
+                if highest_i > 350:
                     test_output_file_name = str(hiddennodes) + 'nodes_' + 'reg_'+str(best_reg) + 'lspeed_' + str(learning_speed) + 'output.txt'
-                    test_NN(NN, testseqs, test_sequenceList, directory + 'outputs\\' + test_output_file_name)
-        
+                    xvalid_output_file_name = str(hiddennodes) + 'nodes_' + 'reg_'+str(best_reg) + 'lspeed_' + str(learning_speed) + 'xvalid.txt'
+                    test_NN(bestNN, testseqs, test_sequenceList, directory + 'outputs\\' + test_output_file_name)
+                    test_NN(bestNN, xvalid_seqs, xvalid_sequenceList, directory + 'outputs\\' + xvalid_output_file_name)
+                    
+    print reg, lspeed    
     outputFilename =  directory+'summary_0to1_nodes.txt'
     out = open(outputFilename, 'w')
     for i in range(len(summary)):
         out.write('hidden nodes = '+ str(summary[i][0]) + '\t'+ 'regularization  =' + str(summary[i][1])+ '\t'+ 'learning speed =  '+ str(summary[i][2])+ '\t' + 'error =  '+ str(summary[i][3])+ '\n')
     out.close()
-    
-
-    
-    #NN= train_NN(NN, full_training_set, full_sequenceList, xvalid_seqs, xvalid_sequenceList, best_reg, learning_speed = .1, error_tolerance = 1e-6)
-
-    return NN
+    return keepNN
 
 ###############################################################################
 #                                                                             #
@@ -454,7 +457,7 @@ def main():
     
     #test_output_file_name = 'final_trained_output.txt'
     #print best_reg
-    #test_NN(NN, testseqs, test_sequenceList, directory + test_output_file_name)
+    test_NN(NN, testseqs, test_sequenceList, directory + test_output_file_name)
     
     return 1
 
